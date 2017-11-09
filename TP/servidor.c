@@ -19,6 +19,15 @@ int main(int argc, char** argv){
 
     FILE *f;
     char comando[100];
+    int openfile;
+
+    if(mkfifo("fifoserv", S_IWUSR | S_IRUSR) != 0)
+        return(EXIT_FAILURE);
+    
+    if((openfile = open("fifoserv", O_RDONLY)) < 0){
+        printf("Erro ao abrir o ficheiro\n");
+        return;       
+    }
     
     if(argc != 1){
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
