@@ -1,10 +1,3 @@
-/* 
- * File:   servidor.h
- * Author: fclfi
- *
- * Created on 4 de Novembro de 2017, 11:45
- */
-
 #ifndef SERVIDOR_H
 #define SERVIDOR_H
 

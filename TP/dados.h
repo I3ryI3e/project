@@ -5,9 +5,12 @@
 extern "C" {
 #endif
 
-typedef struct users{
-    char username[30], password[30];
-}user;
+typedef struct clientescomunicacao{
+    char username[30];
+    char password[30];
+    char tecla;     //tecla clicada
+    pid_t pid;
+}clicom;
 
 typedef struct enemies{
     int x, y;       // posicao no mapa
@@ -15,7 +18,6 @@ typedef struct enemies{
 }enemy;
 
 typedef struct jogadores{
-    char username[30];
     int x, y;       //posicao no mapa
     int speed;      //velocidade do jogador
     int rangeexp;   //tamanho da explosao
@@ -24,7 +26,6 @@ typedef struct jogadores{
     int megabomb;
     int nvidas;     //numero de vidas do jogador
     int pontuacao;  //pontuacao do jogador
-    pid_t pid;
 }jogador;
 
 typedef struct tiles{
@@ -34,6 +35,11 @@ typedef struct tiles{
     int inimigo;    // tem ou nao tem 1 ou 0
     int jogador;    // tem ou nao tem 1 ou 0
 }tile;
+
+typedef struct servidorcomunicacao{
+    tile mapa[20][30];  //campo de jogo
+    jogador player;     //informacao do jogador
+}servcom;
 
 #ifdef __cplusplus
 }

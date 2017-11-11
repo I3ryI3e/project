@@ -19,7 +19,7 @@ int main(int argc, char** argv){
 
     FILE *f;
     char comando[100];
-    int openfile;
+    /*int openfile;
 
     if(mkfifo("fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
@@ -27,13 +27,13 @@ int main(int argc, char** argv){
     if((openfile = open("fifoserv", O_RDONLY)) < 0){
         printf("Erro ao abrir o ficheiro\n");
         return;       
-    }
+    }*/
     
-    if(argc != 1){
+    if(argc != 2){
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
         return (EXIT_FAILURE);
     }
-    if((f = fopen("data", "rt")) == NULL){
+    if((f = fopen(argv[1], "rt")) == NULL){
         printf("Erro: Ficheiro nao encontrado\n");
         return (EXIT_FAILURE);
     }
@@ -43,7 +43,7 @@ int main(int argc, char** argv){
         scanf(" %[^\n]99s", comando);
         
         if(!strncmp(comando, "add ", 4)){
-            adduser("data", comando);
+            adduser(argv[1], comando);
             printf("Tudo bem\n");
             continue;
         }
@@ -78,8 +78,8 @@ int main(int argc, char** argv){
 void adduser(char* nomefich, char* cmd){
     
     FILE *f;
-    user new, aux;
-    int i, j, flag=0, file;
+    clicom new, aux;
+    int i, j, flag=0; //file;
     
     for(i=4, j=0;i<100;i++, j++){
         if(!flag){
@@ -130,12 +130,12 @@ void adduser(char* nomefich, char* cmd){
         return;
     }
     while(fscanf(f, " %29s", aux.username) != EOF){
-         fscanf(f, " %29s", aux.password);
-         if(strcmp(new.username, aux.username) == 0){
-             printf("Erro: nome do utilizador ja existente\n");
-             fclose(f);
-             return;
-         }
+        fscanf(f, " %29s", aux.password);
+        if(strcmp(new.username, aux.username) == 0){
+            printf("Erro: nome do utilizador ja existente\n");
+            fclose(f);
+            return;
+        }
     }
     fprintf(f, "%s\n%s\n", new.username, new.password);
     
