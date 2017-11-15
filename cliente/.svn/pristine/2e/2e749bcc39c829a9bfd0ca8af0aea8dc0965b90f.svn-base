@@ -5,7 +5,6 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>Login.h</itemPath>
-      <itemPath>dados.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -49,8 +48,6 @@
       </item>
       <item path="Login.ui" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="dados.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
     </conf>
@@ -83,8 +80,6 @@
       <item path="Login.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Login.ui" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="dados.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
       </item>
