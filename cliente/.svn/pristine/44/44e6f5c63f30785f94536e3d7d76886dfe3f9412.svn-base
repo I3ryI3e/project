@@ -14,14 +14,6 @@
 #include "Login.h"
 #include <QString>
 #include <string>
-#include "dados.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-
-
-
 
 Login::Login(string fifo) : fifoname(fifo){
     widget.setupUi(this);
@@ -30,12 +22,11 @@ Login::Login(string fifo) : fifoname(fifo){
 }
 
 void Login::on_submitbutton_clicked(){
-    clicom novo;
-   
-    strcpy(novo.username,widget.usernametext->text().toLatin1().data());
-    strcpy(novo.password,widget.passwordtext->text().toLatin1().data());
-    strcpy(novo.fifopid,fifoname.c_str());
+    char* username= new char[widget.usernametext->text().length()+1];
+    char* password= new char[widget.passwordtext->text().length()+1];
     
+    strcpy(username,widget.usernametext->text().toLatin1().data());
+    strcpy(password,widget.passwordtext->text().toLatin1().data());
     
 }
 
