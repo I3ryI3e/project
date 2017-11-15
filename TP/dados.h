@@ -9,7 +9,7 @@ typedef struct clientescomunicacao{
     char username[30];
     char password[30];
     char tecla;     //tecla clicada
-    pid_t pid;
+    char fifopid[10];
 }clicom;
 
 typedef struct enemies{
