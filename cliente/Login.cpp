@@ -36,9 +36,8 @@ void Login::on_submitbutton_clicked(){
     strcpy(novo.password,widget.passwordtext->text().toLatin1().data());
     strcpy(novo.fifopid,fifoname.c_str());
     
-    
+    if(::open());
 }
-
 
 
 Login::~Login() {
