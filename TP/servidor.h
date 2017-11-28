@@ -5,9 +5,13 @@
 extern "C" {
 #endif
 
+#include "dados.h"
+    
 void adduser(char* nomefich, char* cmd);
 
-void tratateclado();
+void* tratateclado();
+
+int checkcliente(char* nomefich, clicom teste);
 
 void shutdown(int sig);
 

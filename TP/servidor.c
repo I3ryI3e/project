@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include "servidor.h"
 #include "dados.h"
 
@@ -88,40 +89,42 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-void tratateclado(){
+void* tratateclado(void* shutd){
     
     char* cmd;
     char linha[100], token[100];
+    int *shut = (int*)shutd;
     
-    scanf(" %[^\n]99s", linha);
-        
-    strncpy(token, linha, 99);
-    cmd = strtok(token, " ");
+    while(1){
+        scanf(" %[^\n]99s", linha);
 
-    if(!strcmp(cmd, "add")){
-        adduser("data.txt", linha);
-        printf("Tudo bem\n");
-    }else{
-        if(!strcmp(cmd, "users")){
-            printf("Mostra users\n");
+        strncpy(token, linha, 99);
+        cmd = strtok(token, " ");
+
+        if(!strcmp(cmd, "add")){
+            adduser("data.txt", linha);
         }else{
-            if(!strcmp(cmd, "kick")){
-                printf("Termina a ligacao do jogador\n");
+            if(!strcmp(cmd, "users")){
+                printf("Mostra users\n");
             }else{
-                if(!strcmp(cmd, "game")){
-                    printf("Mostra informacao sobre o jogo\n");
+                if(!strcmp(cmd, "kick")){
+                    printf("Termina a ligacao do jogador\n");
                 }else{
-                    if(!strcmp(cmd, "shutdown")){
-                        printf("Vai sair\n");
-                        shutdown(0);
+                    if(!strcmp(cmd, "game")){
+                        printf("Mostra informacao sobre o jogo\n");
                     }else{
-                        if(!strcmp(cmd, "map")){
-                            printf("Carrega um labirinto\n");
+                        if(!strcmp(cmd, "shutdown")){
+                            printf("Vai sair\n");
+                            *shut = 0;
                         }else{
-                            if(!strcmp(cmd, "help")){
-                                printf("\nComandos reconhecidos:\n\tadd username password;\n\tusers;\n\tkick username;\n\tgame;\n\tshutdown;\n\tmap nome_do_ficheiro;\n");
+                            if(!strcmp(cmd, "map")){
+                                printf("Carrega um labirinto\n");
                             }else{
-                                printf("\nComando nao reconhecido, escreva 'help' para ver os comandos\n");
+                                if(!strcmp(cmd, "help")){
+                                    printf("\nComandos reconhecidos:\n\tadd username password;\n\tusers;\n\tkick username;\n\tgame;\n\tshutdown;\n\tmap nome_do_ficheiro;\n");
+                                }else{
+                                    printf("\nComando nao reconhecido, escreva 'help' para ver os comandos\n");
+                                }
                             }
                         }
                     }
@@ -129,28 +132,50 @@ void tratateclado(){
             }
         }
     }
+    pthread_exit(NULL);
 }
 
 void shutdown(int sig){
     
-    close(3);               //NAO PODE SER 3
+    close(3);                                                                   //NAO PODE SER 3
     unlink("/tmp/fifoserv");
     exit(EXIT_SUCCESS);
+}
+
+int checkcliente(char* nomefich, clicom teste){
+    
+    int file;
+    clicom aux;
+    
+    if((file = open(nomefich, O_RDONLY)) < 0){
+        perror("Erro ao abrir o ficheiro\n");
+        return 1;       
+    }
+    while(read(file, &aux.username, sizeof(aux.username)) != 0){
+        read(file, &aux.password, sizeof(aux.password));
+        if(strcmp(teste.username, aux.username) == 0){
+            if(strcmp(teste.password, aux.password) == 0)
+                return 0;
+        }
+    }
+    close(file);
+    return 1;
 }
 
 int main(int argc, char** argv){
 
     FILE *f;
-    int openfile, rs,teste;
-    fd_set readfds;
-    clicom teste1;
+    int openfile, checkcmd = 1;
+    clicom teste;
+    pthread_t thread;
+    void *status;
     
     if(signal(SIGUSR1, shutdown) == SIG_ERR){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
     }
     
-    if(argc != 1){
+    if(argc != 1){                                                              //ARGC TEM QUE SER 2 PK RECEBE O NOME DO FICHEIRO
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
         return (EXIT_FAILURE);
     }
@@ -168,24 +193,24 @@ int main(int argc, char** argv){
         return(EXIT_FAILURE);
     }
     
-    printf("Mensagem de boas vindas..\n");
+    printf("Mensagem de boas vindas..\n");                                      //MUDAR ISTO
     
-    while(1){
-        FD_ZERO(&readfds);
-        FD_SET(openfile, &readfds);
-        FD_SET(0, &readfds);
-        rs = select(openfile+1, &readfds, NULL, NULL, NULL);
-        if(rs == -1)
-            perror("Erro no select\n");
-        if(FD_ISSET(0, &readfds))
-            tratateclado();
-        if(FD_ISSET(openfile, &readfds)){
-            if((teste=read(openfile,&teste1,sizeof(teste1))) < 0){
-                printf("Erro na leitura do fifo");
-            }else{
-                printf("Username: %s\nPassword: %s\n",teste1.username,teste1.password);
-            }
-            
-        }
+    if(pthread_create(&thread, NULL, tratateclado, (void*)&checkcmd) != 0){
+        perror("Erro ao criar a thread\n");
+        return(EXIT_FAILURE);
     }
+    
+    while(checkcmd){
+        if(read(openfile,&teste,sizeof(teste)) < 0){
+            perror("Erro na leitura do fifo\n");
+            break;
+        }
+        if(checkcliente("data.txt", teste))
+            printf("Jogador falso\n");
+        else
+            printf("Jogador reconhecido\n");
+    }
+
+    pthread_join(thread, &status);
+    shutdown(0);
 }
