@@ -116,7 +116,7 @@
  <connections>
   <connection>
    <sender>passwordtext</sender>
-   <signal>editingFinished()</signal>
+   <signal>textChanged(QString)</signal>
    <receiver>submitbutton</receiver>
    <slot>show()</slot>
    <hints>

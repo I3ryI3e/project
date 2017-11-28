@@ -12,12 +12,18 @@
  */
 
 
-#include "Login.h"
+
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <string>
+#include <pthread.h>
+#include "Game.h"
+
+void* lepipe(void*){
+    
+}
 
 int main(int argc, char *argv[]) {
     pid_t pid=getpid();
@@ -31,8 +37,7 @@ int main(int argc, char *argv[]) {
         exit(-1);
     
     QApplication app(argc, argv);
-    Login first(fifoname.str());
-    first.show();
+    Game novojogo(fifoname.str());
     return app.exec();
     
 }

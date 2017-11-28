@@ -5,6 +5,11 @@
 extern "C" {
 #endif
 
+typedef struct threadlepipecliente{
+    char fifopid[10];
+
+}tlepipe;    
+    
 typedef struct clientescomunicacao{
     char username[30];
     char password[30];

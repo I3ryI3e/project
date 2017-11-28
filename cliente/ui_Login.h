@@ -69,7 +69,7 @@ public:
         submitbutton->setGeometry(QRect(229, 240, 111, 41));
 
         retranslateUi(Login);
-        QObject::connect(passwordtext, SIGNAL(editingFinished()), submitbutton, SLOT(show()));
+        QObject::connect(passwordtext, SIGNAL(textChanged(QString)), submitbutton, SLOT(show()));
 
         QMetaObject::connectSlotsByName(Login);
     } // setupUi

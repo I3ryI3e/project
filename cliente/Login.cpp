@@ -23,10 +23,11 @@
 
 
 
-Login::Login(string fifo) : fifoname(fifo){
+Login::Login(string fifo): fifoname(fifo){
     widget.setupUi(this);
     widget.submitbutton->hide();
     widget.passwordtext->setEchoMode(QLineEdit::Password);
+    show();
 }
 
 void Login::on_submitbutton_clicked(){
@@ -44,9 +45,8 @@ void Login::on_submitbutton_clicked(){
         ::close(fd);
         return;
     }
-            
+    ::close(fd);           
 }
-
 
 Login::~Login() {
 }
