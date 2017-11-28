@@ -47,6 +47,9 @@ void Login::on_submitbutton_clicked(){
     }
     ::close(fd);           
 }
+Ui::Login Login::getWidget(){
+    return widget;
+}
 
 Login::~Login() {
 }

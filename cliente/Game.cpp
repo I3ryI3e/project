@@ -12,12 +12,13 @@
  */
 
 #include "Game.h"
+#include <QAbstractButton>
 
 Game::Game(string nomefifo): fifoname(nomefifo){
     login=new Login(fifoname);
     scene = new QGraphicsScene();
     view = new QGraphicsView();
-    QObject::connect(login,SIGNAL(on_submitbutton_realeased()),this,SLOT(acaboulogin()));
+    QObject::connect(login->getWidget().submitbutton,SIGNAL(released()),this,SLOT(acaboulogin()));
 }
 
 void Game::acaboulogin(){

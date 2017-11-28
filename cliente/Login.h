@@ -32,7 +32,8 @@ public:
     Login(string fifo);
     virtual ~Login();
 public slots:
-    void on_submitbutton_clicked(); 
+    void on_submitbutton_clicked();
+    Ui::Login getWidget();
 private:
     Ui::Login widget;
 };
