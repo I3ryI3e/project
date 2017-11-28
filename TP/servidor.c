@@ -44,26 +44,8 @@ void adduser(char* nomefich, char* cmd){
     strncpy(new.username, user, 29);
     strncpy(new.password, pass, 29);
     
-    /*for(i=4, j=0;i<100;i++, j++){
-        if(!flag){
-            if(cmd[i] != ' '){
-                new.username[j] = cmd[i];
-            }else{
-                new.username[j] = '\0';
-                flag=1;
-                j=0;
-                i++;
-            }
-        }
-        if(flag){
-            if(cmd[i] != '\0'){
-                new.password[j] = cmd[i];
-            }else{
-                new.password[j] = cmd[i];
-                i=100;
-            }
-        }
-    }
+
+/*
     if((file = open(nomefich, O_RDONLY)) < 0){
         perror("Erro ao abrir o ficheiro\n");
         return;       
@@ -85,7 +67,8 @@ void adduser(char* nomefich, char* cmd){
         perror("Erro na escrita do novo utilizador\n");
         return;
     }
-    close(file);*/
+    close(file);
+*/
     
     if((f = fopen(nomefich, "a+")) == NULL){
         perror("Erro ao abrir o ficheiro\n");
@@ -151,15 +134,16 @@ void tratateclado(){
 void shutdown(int sig){
     
     close(3);               //NAO PODE SER 3
-    unlink("fifologin");
+    unlink("/tmp/fifoserv");
     exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char** argv){
 
     FILE *f;
-    int openfile, rs;
+    int openfile, rs,teste;
     fd_set readfds;
+    clicom teste1;
     
     if(signal(SIGUSR1, shutdown) == SIG_ERR){
         perror("Erro no sinal\n");
@@ -176,10 +160,10 @@ int main(int argc, char** argv){
     }
     fclose(f);
     
-    if(mkfifo("fifologin", S_IWUSR | S_IRUSR) != 0)
+    if(mkfifo("/tmp/fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
     
-    if((openfile = open("fifologin", O_RDWR)) < 0){
+    if((openfile = open("/tmp/fifoserv", O_RDWR)) < 0){
         perror("Erro ao abrir o ficheiro\n");
         return(EXIT_FAILURE);
     }
@@ -196,7 +180,12 @@ int main(int argc, char** argv){
         if(FD_ISSET(0, &readfds))
             tratateclado();
         if(FD_ISSET(openfile, &readfds)){
-            printf("OLHO FIFOO");
+            if((teste=read(openfile,&teste1,sizeof(teste1))) < 0){
+                printf("Erro na leitura do fifo");
+            }else{
+                printf("Username: %s\nPassword: %s\n",teste1.username,teste1.password);
+            }
+            
         }
     }
 }

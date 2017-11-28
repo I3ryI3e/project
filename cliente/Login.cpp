@@ -31,12 +31,20 @@ Login::Login(string fifo) : fifoname(fifo){
 
 void Login::on_submitbutton_clicked(){
     clicom novo;
+    int fd,num;
    
     strcpy(novo.username,widget.usernametext->text().toLatin1().data());
     strcpy(novo.password,widget.passwordtext->text().toLatin1().data());
     strcpy(novo.fifopid,fifoname.c_str());
     
-    if(::open());
+    if((fd= (::open("/tmp/fifoserv", O_WRONLY)))< 0){
+        return;
+    }
+    if((num=write(fd,&novo,sizeof(novo))) < 0){
+        ::close(fd);
+        return;
+    }
+            
 }
 
 
