@@ -45,32 +45,6 @@ void adduser(char* nomefich, char* cmd){
     strncpy(new.username, user, 29);
     strncpy(new.password, pass, 29);
     
-
-/*
-    if((file = open(nomefich, O_RDONLY)) < 0){
-        perror("Erro ao abrir o ficheiro\n");
-        return;       
-    }
-    while(read(file, &aux, sizeof(aux)) != 0){
-        if(strcmp(new.username, aux.username) == 0){
-            perror("Erro: nome do utilizador ja existente\n");
-            close(file);
-            return;
-        }
-    }
-    close(file);
-    if((file = open(nomefich, O_WRONLY | O_APPEND)) < 0){
-        perror("Erro ao abrir o ficheiro\n");
-        return;       
-    }
-    if(write(file, &new, sizeof(aux)) != sizeof(aux)){
-        close(file);
-        perror("Erro na escrita do novo utilizador\n");
-        return;
-    }
-    close(file);
-*/
-    
     if((f = fopen(nomefich, "a+")) == NULL){
         perror("Erro ao abrir o ficheiro\n");
         return;
@@ -144,21 +118,21 @@ void shutdown(int sig){
 
 int checkcliente(char* nomefich, clicom teste){
     
-    int file;
+    FILE *f;
     clicom aux;
     
-    if((file = open(nomefich, O_RDONLY)) < 0){
+    if((f = fopen(nomefich, "rt")) == NULL){
         perror("Erro ao abrir o ficheiro\n");
-        return 1;       
+        return 1;
     }
-    while(read(file, &aux.username, sizeof(aux.username)) != 0){
-        read(file, &aux.password, sizeof(aux.password));
+    while(fscanf(f, " %29s", aux.username) != EOF){
+        fscanf(f, " %29s", aux.password);
         if(strcmp(teste.username, aux.username) == 0){
             if(strcmp(teste.password, aux.password) == 0)
                 return 0;
         }
     }
-    close(file);
+    close(f);
     return 1;
 }
 
