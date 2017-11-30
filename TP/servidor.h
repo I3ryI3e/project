@@ -7,11 +7,21 @@ extern "C" {
 
 #include "dados.h"
     
+typedef struct infoglobal{
+    clogin* clientes_activos;
+    tile mapa[20][30];
+    char nomefich[30];
+    int continua;
+}infoglobal;
+
+    
 void adduser(char* nomefich, char* cmd);
+
+void inicializa_com(servcom* data);
 
 void* tratateclado();
 
-int checkcliente(char* nomefich, clicom teste);
+int cliente_reconhecido(char* nomefich, clogin teste);
 
 void shutdown(int sig);
 

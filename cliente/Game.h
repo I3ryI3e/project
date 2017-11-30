@@ -20,7 +20,11 @@
 #include <QGraphicsView>
 #include <string>
 #include <unistd.h>
+#include "dados.h"
+#include <pthread.h>
+#include <signal.h>
 using namespace std;
+
 
 class Game : public QObject{
     Q_OBJECT
@@ -28,14 +32,24 @@ class Game : public QObject{
     QGraphicsScene *scene;
     QGraphicsView  *view;
     string fifoname;
+
 public:
-    Game(string nomefifo);
+    Game(string fifo);
+    void update(servcom novo);
     ~Game();
 
 public slots:
     void acaboulogin();
 
 };
+
+
+typedef struct infoglobal{
+    Game* jogo;
+    pthread_t threadid;
+    string fifo;
+}informacao;
+
 
 #endif /* GAME_H */
 

@@ -5,12 +5,16 @@
 extern "C" {
 #endif
 
-typedef struct clientescomunicacao{
+typedef struct clienteslogin{
     char username[30];
     char password[30];
-    char tecla;     //tecla clicada
+    char fifopid[15];
+}clogin;
+
+typedef struct clientesmovimento{
+    char tecla;
     char fifopid[10];
-}clicom;
+}cmov;
 
 typedef struct enemies{
     int x, y;       // posicao no mapa
@@ -19,8 +23,6 @@ typedef struct enemies{
 
 typedef struct jogadores{
     int x, y;       //posicao no mapa
-    int speed;      //velocidade do jogador
-    int rangeexp;   //tamanho da explosao
     int items;      //migalhas para passar de nivel
     int bomb;
     int megabomb;
@@ -30,10 +32,9 @@ typedef struct jogadores{
 
 typedef struct tiles{
     int wall;       // 1 = parede indestrutivel   0 = sem parede   -1 = parede destrutivel
-    int powerup;    // 0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z
+    int powerup;    // -1 = migalha   0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z
     int explosao;   // explosao da bomba
-    int inimigo;    // tem ou nao tem 1 ou 0
-    int jogador;    // tem ou nao tem 1 ou 0
+    int personagem; // 0 = não tem  1- tem jogador  2- tem inimigo
 }tile;
 
 typedef struct servidorcomunicacao{

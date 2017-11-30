@@ -1,10 +1,3 @@
-/* 
- * File:   servidor.c
- * Author: fclfi
- *
- * Created on 25 de Outubro de 2017, 18:46
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,10 +12,13 @@
 #include "servidor.h"
 #include "dados.h"
 
+infoglobal info;
+pthread_mutex_t lock;
+
 void adduser(char* nomefich, char* cmd){
     
     FILE *f;
-    clicom new, aux;
+    clogin new, aux;
     int flag=0;
     char* token;
     char* pass;
@@ -63,20 +59,31 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-void* tratateclado(void* shutd){
+void inicializa_com(servcom* data){
+    data->player.x=0;
+    data->player.y=0;
+    data->player.bomb=3;
+    data->player.megabomb=2;
+    data->player.nvidas= 2;
+    data->player.pontuacao=0;
+    data->player.items=0;
+}
+
+void* tratateclado(void* lixo){
     
     char* cmd;
     char linha[100], token[100];
-    int *shut = (int*)shutd;
+    int openfifo;
+    int encerrar=0;
     
-    while(1){
+    while(info.continua){
         scanf(" %[^\n]99s", linha);
 
         strncpy(token, linha, 99);
         cmd = strtok(token, " ");
 
         if(!strcmp(cmd, "add")){
-            adduser("data.txt", linha);
+            adduser(info.nomefich, linha);
         }else{
             if(!strcmp(cmd, "users")){
                 printf("Mostra users\n");
@@ -88,8 +95,16 @@ void* tratateclado(void* shutd){
                         printf("Mostra informacao sobre o jogo\n");
                     }else{
                         if(!strcmp(cmd, "shutdown")){
-                            printf("Vai sair\n");
-                            *shut = 0;
+                            if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
+                                perror("Erro ao abrir o fifo\n");
+                             }
+                            pthread_mutex_lock(&lock);
+                            info.continua=0;
+                            pthread_mutex_unlock(&lock);
+                            if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
+                                perror("Erro ao escrever para fifo\n");
+                            }
+                            pthread_exit(NULL);
                         }else{
                             if(!strcmp(cmd, "map")){
                                 printf("Carrega um labirinto\n");
@@ -116,73 +131,106 @@ void shutdown(int sig){
     exit(EXIT_SUCCESS);
 }
 
-int checkcliente(char* nomefich, clicom teste){
+int cliente_reconhecido(char* nomefich, clogin teste){
     
     FILE *f;
-    clicom aux;
+    clogin aux;
     
     if((f = fopen(nomefich, "rt")) == NULL){
         perror("Erro ao abrir o ficheiro\n");
-        return 1;
+        return 0;
     }
     while(fscanf(f, " %29s", aux.username) != EOF){
         fscanf(f, " %29s", aux.password);
         if(strcmp(teste.username, aux.username) == 0){
-            if(strcmp(teste.password, aux.password) == 0)
-                return 0;
+            if(strcmp(teste.password, aux.password) == 0){
+                fclose(f);
+                return 1;
+            }
         }
     }
-    close(f);
-    return 1;
+    fclose(f);
+    return 0;
 }
 
 int main(int argc, char** argv){
 
-    FILE *f;
-    int openfile, checkcmd = 1;
-    clicom teste;
+    int openfifo,tipomsg, resposta,fifocliente;
+    clogin login;
+    cmov movimento;
+    servcom dados_jogo;
     pthread_t thread;
     void *status;
     
+    if (pthread_mutex_init(&lock, NULL) != 0)
+    {
+        printf("Inicilizacao do mutex falhou\n");
+        return (EXIT_FAILURE);
+    }
     if(signal(SIGUSR1, shutdown) == SIG_ERR){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
     }
     
-    if(argc != 1){                                                              //ARGC TEM QUE SER 2 PK RECEBE O NOME DO FICHEIRO
+    if(argc != 2){                                                              //ARGC TEM QUE SER 2 PK RECEBE O NOME DO FICHEIRO
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
         return (EXIT_FAILURE);
     }
-    if((f = fopen("data.txt", "rt")) == NULL){
-        perror("Erro: Ficheiro nao encontrado\n");
-        return (EXIT_FAILURE);
-    }
-    fclose(f);
+    strcpy(info.nomefich, argv[1]);                                           
+    info.clientes_activos=NULL;
+    info.continua=1;
     
     if(mkfifo("/tmp/fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
     
-    if((openfile = open("/tmp/fifoserv", O_RDWR)) < 0){
-        perror("Erro ao abrir o ficheiro\n");
+    if((openfifo = open("/tmp/fifoserv", O_RDWR)) < 0){
+        perror("Erro ao abrir o fifo\n");
         return(EXIT_FAILURE);
     }
     
     printf("Mensagem de boas vindas..\n");                                      //MUDAR ISTO
     
-    if(pthread_create(&thread, NULL, tratateclado, (void*)&checkcmd) != 0){
+    if(pthread_create(&thread, NULL, tratateclado, (void*)NULL) != 0){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
     
-    while(checkcmd){
-        if(read(openfile,&teste,sizeof(teste)) < 0){
+    while(info.continua){
+        
+        if(read(openfifo,&tipomsg,sizeof(tipomsg)) < 0){
             perror("Erro na leitura do fifo\n");
             break;
         }
-        if(checkcliente("data.txt", teste))
-            printf("Jogador falso\n");
-        else
-            printf("Jogador reconhecido\n");
+        if(tipomsg==1){
+            if(read(openfifo,&login,sizeof(login)) < 0){
+                perror("Erro na leitura do fifo\n");
+                break;
+            }
+        
+            if(resposta=cliente_reconhecido("data.txt", login))
+                printf("Jogador reconhecido\n");
+            else
+                printf("Jogador falso\n");
+            if((fifocliente= open(login.fifopid, O_WRONLY)) < 0){
+                perror("Erro ao abrir o fifo cliente\n");
+            }
+            if(write(fifocliente,&resposta,sizeof(resposta)) < 0){
+                perror("Erro a escrever para cliente\n");
+            }
+            if(resposta){
+                inicializa_com(&dados_jogo);
+                if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){
+                    perror("Erro a escrever para cliente\n");
+                }
+            }
+            close(fifocliente);
+            
+        }else if(tipomsg == 2){
+            if(read(openfifo,&movimento,sizeof(movimento)) < 0){
+                perror("Erro na leitura do fifo\n");
+                break;
+            }
+        }
     }
 
     pthread_join(thread, &status);

@@ -14,8 +14,10 @@
 #include "Game.h"
 #include <QAbstractButton>
 
-Game::Game(string nomefifo): fifoname(nomefifo){
-    login=new Login(fifoname);
+extern  informacao info;
+
+Game::Game(string fifo):fifoname(fifo){
+    login=new Login(fifo);
     scene = new QGraphicsScene();
     view = new QGraphicsView();
     QObject::connect(login->getWidget().submitbutton,SIGNAL(released()),this,SLOT(acaboulogin()));
@@ -27,11 +29,16 @@ void Game::acaboulogin(){
     view->setFixedSize(800, 600);
     scene->setSceneRect(0, 0, 800, 600);
 }
+void Game::update(servcom novo){
+    
+}
 
 Game::~Game(){
     delete login;
     delete scene;
     delete view;
+    pthread_kill(info.threadid,SIGUSR1);
+    pthread_join(info.threadid,NULL);
     unlink(fifoname.c_str());
 }
 

@@ -31,9 +31,9 @@ Login::Login(string fifo): fifoname(fifo){
 }
 
 void Login::on_submitbutton_clicked(){
-    clicom novo;
-    int fd,num;
-   
+    clogin novo;
+    int fd,tipomsg;
+    widget.usernametext->text().data();
     strcpy(novo.username,widget.usernametext->text().toLatin1().data());
     strcpy(novo.password,widget.passwordtext->text().toLatin1().data());
     strcpy(novo.fifopid,fifoname.c_str());
@@ -41,10 +41,9 @@ void Login::on_submitbutton_clicked(){
     if((fd= (::open("/tmp/fifoserv", O_WRONLY)))< 0){
         return;
     }
-    if((num=write(fd,&novo,sizeof(novo))) < 0){
-        ::close(fd);
-        return;
-    }
+    tipomsg=1;
+    write(fd,&tipomsg,sizeof(tipomsg));
+    write(fd,&novo,sizeof(novo));
     ::close(fd);           
 }
 Ui::Login Login::getWidget(){
