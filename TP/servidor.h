@@ -23,7 +23,9 @@ void* tratateclado();
 
 int cliente_reconhecido(char* nomefich, clogin teste);
 
-void shutdown(int sig);
+void thread_sigusr2(int sig);
+
+void shutdown_sigusr1(int sig);
 
 #ifdef __cplusplus
 }
