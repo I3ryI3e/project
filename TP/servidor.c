@@ -203,7 +203,7 @@ int main(int argc, char** argv){
     
     printf("Mensagem de boas vindas..\n");                                      //MUDAR ISTO
     
-    if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)tratacmd_running) != 0){
+    if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&tratacmd_running) != 0){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
