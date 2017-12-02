@@ -9,6 +9,7 @@ extern "C" {
     
 typedef struct infoglobal{
     clogin* clientes_activos;
+    int cli_activos;
     tile mapa[21][31];
     char nomefich[30];
     int continua;
@@ -16,6 +17,8 @@ typedef struct infoglobal{
 
     
 void adduser(char* nomefich, char* cmd);
+
+int addcliente_ativo(clogin newcli, int nmaxplay);
 
 void inicializa_com(servcom* data);
 

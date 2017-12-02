@@ -59,6 +59,37 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
+int addcliente_ativo(clogin newcli, int nmaxplay){
+    
+    clogin* aux;
+    
+    if(info.cli_activos == 0){
+        info.cli_activos=1;
+        if((info.clientes_activos=malloc(sizeof(clogin))) == NULL){
+            perror("Erro na alocacao de memoria\n");
+            return 0;
+        }else{
+            info.clientes_activos[0] = newcli;
+            return 1;
+        }
+    }
+    if(nmaxplay == 1)
+        return 0;
+    if((info.cli_activos+1) == nmaxplay){
+        return 0;
+    }else{
+        ++info.cli_activos;
+        if((aux = realloc(info.clientes_activos, (sizeof(clogin)*info.cli_activos))) == NULL){
+            perror("Erro na realocacao de memoria\n");
+            return 0;
+        }else{
+            info.clientes_activos=aux;
+            info.clientes_activos[info.cli_activos-1] = newcli;
+            return 1;
+        }
+    }
+}
+
 void inicializa_com(servcom* data){
     data->player.x=0;
     data->player.y=0;
@@ -203,6 +234,7 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 int main(int argc, char** argv){
 
     int openfifo, tipomsg, resposta, fifocliente, tratacmd_running=1;
+    int nobject, nenemy, nmaxplay;
     clogin login;
     cmov movimento;
     servcom dados_jogo;
@@ -211,6 +243,24 @@ int main(int argc, char** argv){
     if(argc != 2){
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
         return (EXIT_FAILURE);
+    }
+    if(getenv("NOBJECT") == NULL){
+        srand((unsigned) time(NULL));
+        nobject=(rand()%25)+5;
+    }else{
+        nobject=atoi(getenv("NOBJECT"));
+    }
+    if(getenv("NENEMY") == NULL){
+        srand((unsigned) time(NULL));
+        nenemy=(rand()%5)+1;
+    }else{
+        nenemy=atoi(getenv("NENEMY"));
+    }
+    if(getenv("NMAXPLAY") == NULL){
+        srand((unsigned) time(NULL));
+        nmaxplay=(rand()%20)+1;
+    }else{
+        nmaxplay=atoi(getenv("NMAXPLAY"));
     }
     if(signal(SIGUSR1, shutdown_sigusr1) == SIG_ERR){
         perror("Erro no sinal\n");
@@ -224,6 +274,7 @@ int main(int argc, char** argv){
     strcpy(info.nomefich, argv[1]);                                           
     info.clientes_activos=NULL;
     info.continua=1;
+    inicializa_mapa();
     
     if(mkfifo("/tmp/fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
@@ -248,23 +299,38 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-            resposta=cliente_reconhecido(info.nomefich, login);
+            if(resposta=cliente_reconhecido(info.nomefich, login))              //APAGAR O IF ELSE
+                printf("cliente bom\n");
+            else
+                printf("cliente mau\n");
    
-            if((fifocliente= open(login.fifopid, O_WRONLY)) < 0){
+            if((fifocliente=open(login.fifopid, O_WRONLY)) < 0){
                 perror("Erro ao abrir o fifo cliente\n");
             }
-            if(write(fifocliente,&resposta,sizeof(resposta)) < 0){
-                perror("Erro a escrever para cliente\n");
-            }
             if(resposta){
+                if(addcliente_ativo(login, nmaxplay)){
+                    if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = 1 => LOGIN ACEITE E ADICIONADO
+                        perror("Erro a escrever para cliente\n");
+                    }
+                }else{
+                    resposta=-1;
+                    if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
+                        perror("Erro a escrever para cliente\n");
+                    }
+                }
                 inicializa_com(&dados_jogo);
-                if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){
+                if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){      //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
+                    perror("Erro a escrever para cliente\n");
+                }
+            }else{
+                if(write(fifocliente,&resposta,sizeof(resposta)) < 0){          //RESPOSTA = 0 => LOGIN REJEITADO
                     perror("Erro a escrever para cliente\n");
                 }
             }
             close(fifocliente);
-            
-        }else if(tipomsg == 2){
+            continue;
+        }
+        if(tipomsg == 2){
             if(read(openfifo,&movimento,sizeof(movimento)) < 0){
                 perror("Erro na leitura do fifo\n");
                 break;
