@@ -77,6 +77,8 @@ void* tratateclado(void* tratacmd_running){
         perror("Erro no sinal - tratateclado\n");
     }
     
+    printf("Linha de comandos do servidor:\n");
+    
     while(info.continua){
         scanf(" %[^\n]99s", linha);
 
@@ -106,10 +108,10 @@ void* tratateclado(void* tratacmd_running){
             pthread_mutex_lock(&lock);
             info.continua=0;
             pthread_mutex_unlock(&lock);
+            *((int*)tratacmd_running)=0;
             if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
                 perror("Erro ao escrever para fifo\n");
             }
-            *((int*)tratacmd_running)=0;
             close(openfifo);
             pthread_exit(NULL);
         }
@@ -132,7 +134,7 @@ void thread_sigusr2(int sig){
 
 void shutdown_sigusr1(int sig){
     
-    int openfifo, encerrar=-1;
+    int openfifo, encerrar=0;
     if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
             perror("Erro ao abrir o fifo\n");
         }
@@ -143,7 +145,7 @@ void shutdown_sigusr1(int sig){
             perror("Erro ao escrever para fifo\n");
         }
         close(openfifo);
-        pthread_exit(NULL);
+        return;
 }
 
 int cliente_reconhecido(char* nomefich, clogin teste){
@@ -201,8 +203,6 @@ int main(int argc, char** argv){
         return(EXIT_FAILURE);
     }
     
-    printf("Mensagem de boas vindas..\n");                                      //MUDAR ISTO
-    
     if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&tratacmd_running) != 0){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
@@ -218,11 +218,8 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-        
-            if(resposta=cliente_reconhecido(info.nomefich, login))                 //tirar o if e os printfs
-                printf("Jogador reconhecido\n");
-            else
-                printf("Jogador falso\n");
+            resposta=cliente_reconhecido(info.nomefich, login);
+   
             if((fifocliente= open(login.fifopid, O_WRONLY)) < 0){
                 perror("Erro ao abrir o fifo cliente\n");
             }
