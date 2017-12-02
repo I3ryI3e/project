@@ -38,7 +38,7 @@ typedef struct tiles{
 }tile;
 
 typedef struct servidorcomunicacao{
-    tile mapa[20][30];  //campo de jogo
+    tile mapa[21][31];  //campo de jogo
     jogador player;     //informacao do jogador
 }servcom;
 

@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include "servidor.h"
 #include "dados.h"
+#define LIN 21
+#define COL 31
 
 infoglobal info;
 pthread_mutex_t lock;
@@ -65,6 +67,34 @@ void inicializa_com(servcom* data){
     data->player.nvidas= 2;
     data->player.pontuacao=0;
     data->player.items=0;
+}
+
+void inicializa_mapa(){
+    
+    srand((unsigned) time(NULL));
+    int aux;
+    
+    for(int i=0;i<LIN;i++){
+        for(int j=0;j<COL;j++){
+            info.mapa[i][j].explosao=0;
+            info.mapa[i][j].personagem=0;
+            info.mapa[i][j].powerup=0;
+            if((i==0 && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==1 && (j==0 || j==(COL-1))) ||
+                    (i==(LIN-1) && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==(LIN-2) && (j==0 || j==(COL-1)))){
+                info.mapa[i][j].wall=0;
+            }else if(i%2 != 0 && j%2 != 0){
+                info.mapa[i][j].wall=1;
+            }else{
+                aux = (rand()%100);
+                if(aux < 69)
+                    info.mapa[i][j].wall=2;
+                else
+                    info.mapa[i][j].wall=0;
+            }
+        }
+    }
+    //FAZER AS MIGALHAS
+    return;
 }
 
 void* tratateclado(void* tratacmd_running){

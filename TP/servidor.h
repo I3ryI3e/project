@@ -9,7 +9,7 @@ extern "C" {
     
 typedef struct infoglobal{
     clogin* clientes_activos;
-    tile mapa[20][30];
+    tile mapa[21][31];
     char nomefich[30];
     int continua;
 }infoglobal;
@@ -18,6 +18,8 @@ typedef struct infoglobal{
 void adduser(char* nomefich, char* cmd);
 
 void inicializa_com(servcom* data);
+
+void inicializa_mapa();
 
 void* tratateclado();
 
