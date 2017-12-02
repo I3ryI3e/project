@@ -59,7 +59,7 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-int addcliente_ativo(clogin newcli, int nmaxplay){
+int addcliente_ativo(clogin newcli, int nmaxplay){                              //USA OS MUTEXES
     
     clogin* aux;
     
@@ -344,5 +344,6 @@ int main(int argc, char** argv){
     unlink("/tmp/fifoserv");
     pthread_join(thread_tratateclado, NULL);
     pthread_mutex_destroy(&lock);
+    free(info.clientes_activos);
     return(EXIT_SUCCESS);
 }
