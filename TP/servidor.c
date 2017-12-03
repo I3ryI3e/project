@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include "servidor.h"
-#include "dados.h"
 #define LIN 21
 #define COL 31
 
@@ -59,17 +58,18 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-int addcliente_ativo(clogin newcli, int nmaxplay){                              //USA OS MUTEXES
+int addnewcliente_ativo(clogin newcli, int nmaxplay){                              //USA OS MUTEXES
     
-    clogin* aux;
+    dcli* aux;
     
     if(info.cli_activos == 0){
         info.cli_activos=1;
-        if((info.clientes_activos=malloc(sizeof(clogin))) == NULL){
+        if((info.clientes_activos=malloc(sizeof(dcli))) == NULL){
             perror("Erro na alocacao de memoria\n");
             return 0;
         }else{
-            info.clientes_activos[0] = newcli;
+            info.clientes_activos[0].dados_cli = newcli;
+            set_atributos_newcli(&info.clientes_activos[0].atributos_cli);
             return 1;
         }
     }
@@ -79,25 +79,50 @@ int addcliente_ativo(clogin newcli, int nmaxplay){                              
         return 0;
     }else{
         ++info.cli_activos;
-        if((aux = realloc(info.clientes_activos, (sizeof(clogin)*info.cli_activos))) == NULL){
+        if((aux = realloc(info.clientes_activos, (sizeof(dcli)*info.cli_activos))) == NULL){
             perror("Erro na realocacao de memoria\n");
             return 0;
         }else{
             info.clientes_activos=aux;
-            info.clientes_activos[info.cli_activos-1] = newcli;
+            info.clientes_activos[info.cli_activos-1].dados_cli = newcli;
+            set_atributos_newcli(&info.clientes_activos[info.cli_activos-1].atributos_cli);
             return 1;
         }
     }
 }
 
-void inicializa_com(servcom* data){
-    data->player.x=0;
-    data->player.y=0;
-    data->player.bomb=3;
-    data->player.megabomb=2;
-    data->player.nvidas= 2;
-    data->player.pontuacao=0;
-    data->player.items=0;
+void set_atributos_newcli(jogador* atributos){
+    
+    atributos->x=0;
+    atributos->y=0;
+    atributos->bomb=3;
+    atributos->megabomb=2;
+    atributos->nvidas=2;
+    atributos->pontuacao=0;
+    atributos->items=0;
+}
+
+void set_struct_tocliente(servcom* data, char fpid[15]){
+
+    for(int i=0;i<info.cli_activos;i++){
+        if((strcmp(fpid, info.clientes_activos[i].dados_cli.fifopid) == 0)){
+            data->player.x = info.clientes_activos[i].atributos_cli.x;
+            data->player.y = info.clientes_activos[i].atributos_cli.y;
+            data->player.bomb = info.clientes_activos[i].atributos_cli.bomb;
+            data->player.megabomb = info.clientes_activos[i].atributos_cli.megabomb;
+            data->player.nvidas = info.clientes_activos[i].atributos_cli.nvidas;
+            data->player.pontuacao = info.clientes_activos[i].atributos_cli.pontuacao;
+            data->player.items = info.clientes_activos[i].atributos_cli.items;
+            i=info.cli_activos;
+        }
+    }
+    for(int i=0;i<LIN;i++){
+        for(int j=0;j<COL;j++){
+            data->mapa[i][j].wall = info.mapa[i][j].wall;
+            data->mapa[i][j].powerup = info.mapa[i][j].powerup;
+            data->mapa[i][j].explosao = info.mapa[i][j].explosao;
+        }
+    }
 }
 
 void inicializa_mapa(){
@@ -108,7 +133,6 @@ void inicializa_mapa(){
     for(int i=0;i<LIN;i++){
         for(int j=0;j<COL;j++){
             info.mapa[i][j].explosao=0;
-            info.mapa[i][j].personagem=0;
             info.mapa[i][j].powerup=0;
             if((i==0 && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==1 && (j==0 || j==(COL-1))) ||
                     (i==(LIN-1) && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==(LIN-2) && (j==0 || j==(COL-1)))){
@@ -126,7 +150,9 @@ void inicializa_mapa(){
     }
     //FAZER AS MIGALHAS
     return;
-}
+}                                           //FAZER MIGALHAS
+
+//int trataevalida_tecla(char tecla){}
 
 void* tratateclado(void* tratacmd_running){
     
@@ -271,11 +297,6 @@ int main(int argc, char** argv){
         return (EXIT_FAILURE);
     }
     
-    strcpy(info.nomefich, argv[1]);                                           
-    info.clientes_activos=NULL;
-    info.continua=1;
-    inicializa_mapa();
-    
     if(mkfifo("/tmp/fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
     
@@ -283,6 +304,11 @@ int main(int argc, char** argv){
         perror("Erro ao abrir o fifo\n");
         return(EXIT_FAILURE);
     }
+    
+    strcpy(info.nomefich, argv[1]);                                           
+    info.clientes_activos=NULL;
+    info.continua=1;
+    inicializa_mapa();
     
     if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&tratacmd_running) != 0){
         perror("Erro ao criar a thread\n");
@@ -308,7 +334,7 @@ int main(int argc, char** argv){
                 perror("Erro ao abrir o fifo cliente\n");
             }
             if(resposta){
-                if(addcliente_ativo(login, nmaxplay)){
+                if(addnewcliente_ativo(login, nmaxplay)){
                     if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = 1 => LOGIN ACEITE E ADICIONADO
                         perror("Erro a escrever para cliente\n");
                     }
@@ -316,9 +342,11 @@ int main(int argc, char** argv){
                     resposta=-1;
                     if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
                         perror("Erro a escrever para cliente\n");
+                        close(fifocliente);
+                        break;
                     }
                 }
-                inicializa_com(&dados_jogo);
+                set_struct_tocliente(&dados_jogo, login.fifopid);
                 if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){      //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
                     perror("Erro a escrever para cliente\n");
                 }
@@ -335,6 +363,7 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
+            //trataevalida_tecla(movimento.tecla);
         }
     }
     if(tratacmd_running)
