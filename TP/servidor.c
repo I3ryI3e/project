@@ -34,7 +34,7 @@ void adduser(char* nomefich, char* cmd){
         flag=1;
     }
     if(flag){
-        perror("Erro na validacao dos parametros\n");
+        perror("Erro: parametros invalidos\n");
         return;
     }
     strncpy(new.username, user, 29);
@@ -58,16 +58,49 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-int addnewcliente_ativo(clogin newcli, int nmaxplay){                              //USA OS MUTEXES
+void kickplayer_ativo(char* cmd){
+    
+    char* token;
+    char* kickplayer;
+    dcli* aux;
+    int fifoaux, kick=2;
+    
+    token = strtok(cmd, " ");
+    if((kickplayer = strtok(NULL, " ")) != NULL){
+        for(int i=0;i<info.cli_activos;i++){
+            if(strcmp(kickplayer, info.clientes_activos->dados_cli.username)==0){
+                if((fifoaux=open(info.clientes_activos->dados_cli.fifopid, O_WRONLY)) < 0){
+                    perror("Erro ao abrir o fifo cliente\n");
+                    return;
+                }
+                if(write(fifoaux,&kick,sizeof(kick)) < 0){
+                    perror("Erro ao escrever para fifo\n");
+                }
+                if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
+                    perror("Erro na realocacao de memoria\n");
+                    return;
+                }else{
+                    info.clientes_activos=aux;
+                    --info.cli_activos;
+                    //NAO ESTA ACABADO TOCA A TRABALHAR
+                }
+            }
+        }
+    }else{
+        perror("Erro: parametros invalidos\n");
+    }
+}                                 //FALTA MEXER NO MAPA, E PRECISO MUDAR A ESTRUTURA MAPA!!!    E O NUMERO DO KICK
+
+int addnewcliente_ativo(clogin newcli, int nmaxplay){
     
     dcli* aux;
     
     if(info.cli_activos == 0){
-        info.cli_activos=1;
         if((info.clientes_activos=malloc(sizeof(dcli))) == NULL){
             perror("Erro na alocacao de memoria\n");
             return 0;
         }else{
+            info.cli_activos=1;
             info.clientes_activos[0].dados_cli = newcli;
             set_atributos_newcli(&info.clientes_activos[0].atributos_cli);
             return 1;
@@ -78,18 +111,18 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){                           
     if((info.cli_activos+1) == nmaxplay){
         return 0;
     }else{
-        ++info.cli_activos;
-        if((aux = realloc(info.clientes_activos, (sizeof(dcli)*info.cli_activos))) == NULL){
+        if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos+1)))) == NULL){
             perror("Erro na realocacao de memoria\n");
             return 0;
         }else{
+            ++info.cli_activos;
             info.clientes_activos=aux;
             info.clientes_activos[info.cli_activos-1].dados_cli = newcli;
             set_atributos_newcli(&info.clientes_activos[info.cli_activos-1].atributos_cli);
             return 1;
         }
     }
-}
+}             //USA OS MUTEXES
 
 void set_atributos_newcli(jogador* atributos){
     
@@ -157,16 +190,17 @@ void inicializa_mapa(){
 void* tratateclado(void* tratacmd_running){
     
     char* cmd;
-    char linha[100], token[100];
+    char linha[100], token[100], kickplayer[30];
     int openfifo, encerrar=0;
     
     if(signal(SIGUSR2, thread_sigusr2) == SIG_ERR){
         perror("Erro no sinal - tratateclado\n");
     }
     
-    printf("Linha de comandos do servidor:\n");
+    printf("Linha de comandos do servidor\n");
     
     while(info.continua){
+        printf("Comando: ");
         scanf(" %[^\n]99s", linha);
 
         strncpy(token, linha, 99);
@@ -177,11 +211,17 @@ void* tratateclado(void* tratacmd_running){
             continue;
         }
         if(!strcmp(cmd, "users")){
-            printf("Mostra users\n");
+            if(info.cli_activos==0)
+                printf("Nao existem jogadores ativos\n");
+            else
+                printf("Jogadores ativos:\n");
+            for(int i=0;i<info.cli_activos;i++){
+                printf("%d: %s\n", i, info.clientes_activos->dados_cli.username);
+            }
             continue;
         }
         if(!strcmp(cmd, "kick")){
-            printf("Termina a ligacao do jogador\n");
+            kickplayer_ativo(linha);
             continue;
         }
         if(!strcmp(cmd, "game")){
@@ -337,6 +377,7 @@ int main(int argc, char** argv){
                 if(addnewcliente_ativo(login, nmaxplay)){
                     if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = 1 => LOGIN ACEITE E ADICIONADO
                         perror("Erro a escrever para cliente\n");
+                        break;
                     }
                 }else{
                     resposta=-1;

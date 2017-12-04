@@ -56,6 +56,8 @@ typedef struct infoglobal{
     
 void adduser(char* nomefich, char* cmd);
 
+void kickplayer_ativo(char* cmd);
+
 int addnewcliente_ativo(clogin newcli, int nmaxplay);
 
 void set_atributos_newcli(jogador *atributos);
