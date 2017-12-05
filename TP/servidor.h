@@ -34,6 +34,7 @@ typedef struct tiles{
     int wall;       // 1 = parede indestrutivel   0 = sem parede   -1 = parede destrutivel
     int powerup;    // -1 = migalha   0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z
     int explosao;   // explosao da bomba
+    int personagem; // -1 = inimigo   0 = nada   1 = um jogador   2 = dois jogadores ...
 }tile;
 
 typedef struct servidorcomunicacao{
@@ -60,13 +61,13 @@ void kickplayer_ativo(char* cmd);
 
 int addnewcliente_ativo(clogin newcli, int nmaxplay);
 
-void set_atributos_newcli(jogador *atributos);
+void set_atributos_newcli();
 
 void set_struct_tocliente(servcom* data, char fpid[15]);
 
 void inicializa_mapa();
 
-//int trataevalida_tecla(char tecla);
+void trataevalida_tecla(cmov movcli);
 
 void* tratateclado();
 

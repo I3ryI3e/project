@@ -63,13 +63,15 @@ void kickplayer_ativo(char* cmd){
     char* token;
     char* kickplayer;
     dcli* aux;
+    dcli copia;
     int fifoaux, kick=2;
     
     token = strtok(cmd, " ");
     if((kickplayer = strtok(NULL, " ")) != NULL){
         for(int i=0;i<info.cli_activos;i++){
-            if(strcmp(kickplayer, info.clientes_activos->dados_cli.username)==0){
-                if((fifoaux=open(info.clientes_activos->dados_cli.fifopid, O_WRONLY)) < 0){
+            if(strcmp(kickplayer, info.clientes_activos[i].dados_cli.username)==0){
+                copia = info.clientes_activos[i];
+                if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
                     perror("Erro ao abrir o fifo cliente\n");
                     return;
                 }
@@ -82,6 +84,7 @@ void kickplayer_ativo(char* cmd){
                 }else{
                     info.clientes_activos=aux;
                     --info.cli_activos;
+                    --info.mapa[copia.atributos_cli.x][copia.atributos_cli.y].personagem;
                     //NAO ESTA ACABADO TOCA A TRABALHAR
                 }
             }
@@ -89,7 +92,7 @@ void kickplayer_ativo(char* cmd){
     }else{
         perror("Erro: parametros invalidos\n");
     }
-}                                 //FALTA MEXER NO MAPA, E PRECISO MUDAR A ESTRUTURA MAPA!!!    E O NUMERO DO KICK
+}                                 //NUMERO DO KICK
 
 int addnewcliente_ativo(clogin newcli, int nmaxplay){
     
@@ -100,9 +103,10 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             perror("Erro na alocacao de memoria\n");
             return 0;
         }else{
+            info.clientes_activos[info.cli_activos].dados_cli = newcli;
+            set_atributos_newcli();
+            ++info.mapa[info.clientes_activos[info.cli_activos].atributos_cli.x][info.clientes_activos[info.cli_activos].atributos_cli.y].personagem;
             info.cli_activos=1;
-            info.clientes_activos[0].dados_cli = newcli;
-            set_atributos_newcli(&info.clientes_activos[0].atributos_cli);
             return 1;
         }
     }
@@ -115,24 +119,42 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             perror("Erro na realocacao de memoria\n");
             return 0;
         }else{
-            ++info.cli_activos;
             info.clientes_activos=aux;
-            info.clientes_activos[info.cli_activos-1].dados_cli = newcli;
-            set_atributos_newcli(&info.clientes_activos[info.cli_activos-1].atributos_cli);
+            info.clientes_activos[info.cli_activos].dados_cli = newcli;
+            set_atributos_newcli();
+            ++info.mapa[info.clientes_activos[info.cli_activos].atributos_cli.x][info.clientes_activos[info.cli_activos].atributos_cli.y].personagem;
+            ++info.cli_activos;
             return 1;
         }
     }
 }             //USA OS MUTEXES
 
-void set_atributos_newcli(jogador* atributos){
+void set_atributos_newcli(){
     
-    atributos->x=0;
-    atributos->y=0;
-    atributos->bomb=3;
-    atributos->megabomb=2;
-    atributos->nvidas=2;
-    atributos->pontuacao=0;
-    atributos->items=0;
+    int aux;
+    info.clientes_activos[info.cli_activos].atributos_cli.bomb=3;
+    info.clientes_activos[info.cli_activos].atributos_cli.megabomb=2;
+    info.clientes_activos[info.cli_activos].atributos_cli.nvidas=2;
+    info.clientes_activos[info.cli_activos].atributos_cli.pontuacao=0;
+    info.clientes_activos[info.cli_activos].atributos_cli.items=0;
+    aux = rand()%4;
+    if(aux == 0){
+        info.clientes_activos[info.cli_activos].atributos_cli.x=0;
+        info.clientes_activos[info.cli_activos].atributos_cli.y=0;
+    }else{
+        if(aux == 1){
+            info.clientes_activos[info.cli_activos].atributos_cli.x=0;
+            info.clientes_activos[info.cli_activos].atributos_cli.y=(COL-1);
+        }else{
+            if(aux == 2){
+                info.clientes_activos[info.cli_activos].atributos_cli.x=(LIN-1);
+                info.clientes_activos[info.cli_activos].atributos_cli.y=0;
+            }else{
+                info.clientes_activos[info.cli_activos].atributos_cli.x=(LIN-1);
+                info.clientes_activos[info.cli_activos].atributos_cli.y=(COL-1);
+            }
+        }
+    }
 }
 
 void set_struct_tocliente(servcom* data, char fpid[15]){
@@ -154,19 +176,20 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
             data->mapa[i][j].wall = info.mapa[i][j].wall;
             data->mapa[i][j].powerup = info.mapa[i][j].powerup;
             data->mapa[i][j].explosao = info.mapa[i][j].explosao;
+            data->mapa[i][j].personagem = info.mapa[i][j].personagem;
         }
     }
 }
 
 void inicializa_mapa(){
     
-    srand((unsigned) time(NULL));
     int aux;
     
     for(int i=0;i<LIN;i++){
         for(int j=0;j<COL;j++){
             info.mapa[i][j].explosao=0;
             info.mapa[i][j].powerup=0;
+            info.mapa[i][j].personagem=0;
             if((i==0 && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==1 && (j==0 || j==(COL-1))) ||
                     (i==(LIN-1) && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==(LIN-2) && (j==0 || j==(COL-1)))){
                 info.mapa[i][j].wall=0;
@@ -174,7 +197,7 @@ void inicializa_mapa(){
                 info.mapa[i][j].wall=1;
             }else{
                 aux = (rand()%100);
-                if(aux < 69)
+                if(aux < 79)
                     info.mapa[i][j].wall=2;
                 else
                     info.mapa[i][j].wall=0;
@@ -183,9 +206,25 @@ void inicializa_mapa(){
     }
     //FAZER AS MIGALHAS
     return;
-}                                           //FAZER MIGALHAS
+}                                           //FAZER MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
-//int trataevalida_tecla(char tecla){}
+void trataevalida_tecla(cmov movcli){
+    
+    dcli aux;
+    for(int i=0;i<info.cli_activos;i++){
+        if(strcmp(movcli.fifopid, info.clientes_activos[i].dados_cli.fifopid)==0){
+            aux = info.clientes_activos[i];
+            i = info.cli_activos;
+        }
+    }
+    if(movcli.tecla == 'u'){
+        if(aux.atributos_cli.x == 0)
+            return;
+        if(info.mapa[aux.atributos_cli.x+1][aux.atributos_cli.y].wall == 0){
+            //ACABAR COM O GEORGE
+        }
+    }
+}                             //INCOMPLETO
 
 void* tratateclado(void* tratacmd_running){
     
@@ -305,29 +344,25 @@ int main(int argc, char** argv){
     cmov movimento;
     servcom dados_jogo;
     pthread_t thread_tratateclado;
+    srand((unsigned) time(NULL));
     
     if(argc != 2){
         printf("Sintaxe: %s nome_do_ficheiro\n", argv[0]);
         return (EXIT_FAILURE);
     }
-    if(getenv("NOBJECT") == NULL){
-        srand((unsigned) time(NULL));
+    if(getenv("NOBJECT") == NULL)
         nobject=(rand()%25)+5;
-    }else{
+    else
         nobject=atoi(getenv("NOBJECT"));
-    }
-    if(getenv("NENEMY") == NULL){
-        srand((unsigned) time(NULL));
+    if(getenv("NENEMY") == NULL)
         nenemy=(rand()%5)+1;
-    }else{
+    else
         nenemy=atoi(getenv("NENEMY"));
-    }
-    if(getenv("NMAXPLAY") == NULL){
-        srand((unsigned) time(NULL));
+    if(getenv("NMAXPLAY") == NULL)
         nmaxplay=(rand()%20)+1;
-    }else{
+    else
         nmaxplay=atoi(getenv("NMAXPLAY"));
-    }
+    
     if(signal(SIGUSR1, shutdown_sigusr1) == SIG_ERR){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
@@ -336,7 +371,6 @@ int main(int argc, char** argv){
         printf("Inicilizacao do mutex falhou\n");
         return (EXIT_FAILURE);
     }
-    
     if(mkfifo("/tmp/fifoserv", S_IWUSR | S_IRUSR) != 0)
         return(EXIT_FAILURE);
     
@@ -404,7 +438,7 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-            //trataevalida_tecla(movimento.tecla);
+            trataevalida_tecla(movimento);
         }
     }
     if(tratacmd_running)
