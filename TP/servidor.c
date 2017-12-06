@@ -61,16 +61,23 @@ void adduser(char* nomefich, char* cmd){
 void kickplayer_ativo(char* cmd){
     
     char* token;
+    char* sendsig;
     char* kickplayer;
     dcli* aux;
     dcli copia;
-    int fifoaux, kick=2;
+    int fifoaux, kick=2, endpid;
     
     token = strtok(cmd, " ");
     if((kickplayer = strtok(NULL, " ")) != NULL){
         for(int i=0;i<info.cli_activos;i++){
             if(strcmp(kickplayer, info.clientes_activos[i].dados_cli.username)==0){
                 copia = info.clientes_activos[i];
+                strncpy(token, info.clientes_activos[i].dados_cli.fifopid, 14);
+                sendsig = strtok(token, "o");
+                sendsig = strtok(NULL, "\0");
+                endpid = atoi(token);
+                kill(endpid, SIGUSR2);                                          //SIGUSR2 = 12
+/*
                 if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
                     perror("Erro ao abrir o fifo cliente\n");
                     return;
@@ -78,6 +85,9 @@ void kickplayer_ativo(char* cmd){
                 if(write(fifoaux,&kick,sizeof(kick)) < 0){
                     perror("Erro ao escrever para fifo\n");
                 }
+*/
+                if(i != (info.cli_activos-1))
+                    info.clientes_activos[i] = info.clientes_activos[info.cli_activos-1];
                 if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
                     perror("Erro na realocacao de memoria\n");
                     return;
@@ -85,8 +95,8 @@ void kickplayer_ativo(char* cmd){
                     info.clientes_activos=aux;
                     --info.cli_activos;
                     --info.mapa[copia.atributos_cli.x][copia.atributos_cli.y].personagem;
-                    //NAO ESTA ACABADO TOCA A TRABALHAR
                 }
+                i = info.cli_activos;
             }
         }
     }else{
@@ -217,11 +227,15 @@ void trataevalida_tecla(cmov movcli){
             i = info.cli_activos;
         }
     }
+    //if(movcli.tecla == 'b')   //CRIA THREAD
+    //if(movcli.tecla == 'm')   //CRIA THREAD
     if(movcli.tecla == 'u'){
         if(aux.atributos_cli.x == 0)
             return;
         if(info.mapa[aux.atributos_cli.x+1][aux.atributos_cli.y].wall == 0){
-            //ACABAR COM O GEORGE
+            //if(info.mapa[aux.atributos_cli.x+1][aux.atributos_cli.y].personagem == -1)    //MATAR O JOGADOR???
+            
+            //ACABAR
         }
     }
 }                             //INCOMPLETO
@@ -229,7 +243,7 @@ void trataevalida_tecla(cmov movcli){
 void* tratateclado(void* tratacmd_running){
     
     char* cmd;
-    char linha[100], token[100], kickplayer[30];
+    char linha[100], token[100];
     int openfifo, encerrar=0;
     
     if(signal(SIGUSR2, thread_sigusr2) == SIG_ERR){
@@ -255,7 +269,7 @@ void* tratateclado(void* tratacmd_running){
             else
                 printf("Jogadores ativos:\n");
             for(int i=0;i<info.cli_activos;i++){
-                printf("%d: %s\n", i, info.clientes_activos->dados_cli.username);
+                printf("%d: %s\n", i, info.clientes_activos[i].dados_cli.username);
             }
             continue;
         }
@@ -271,9 +285,9 @@ void* tratateclado(void* tratacmd_running){
             if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
                 perror("Erro ao abrir o fifo\n");
             }
-            pthread_mutex_lock(&lock);
+            //pthread_mutex_lock(&lock);
             info.continua=0;
-            pthread_mutex_unlock(&lock);
+            //pthread_mutex_unlock(&lock);
             *((int*)tratacmd_running)=0;
             if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
                 perror("Erro ao escrever para fifo\n");
@@ -339,7 +353,9 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 int main(int argc, char** argv){
 
     int openfifo, tipomsg, resposta, fifocliente, tratacmd_running=1;
-    int nobject, nenemy, nmaxplay;
+    int nobject, nenemy, nmaxplay, endpid;
+    char token[15];
+    char* aux;
     clogin login;
     cmov movimento;
     servcom dados_jogo;
@@ -443,7 +459,14 @@ int main(int argc, char** argv){
     }
     if(tratacmd_running)
         pthread_kill(thread_tratateclado, SIGUSR2);
-
+    
+    for(int i=0;i<info.cli_activos;i++){
+        strncpy(token, info.clientes_activos[i].dados_cli.fifopid, 14);
+        aux = strtok(token, "o");
+        aux = strtok(NULL, "\0");
+        endpid = atoi(token);
+        kill(endpid, SIGUSR1);                                                  //SIGUSR1 = 10
+    }
     close(openfifo);
     unlink("/tmp/fifoserv");
     pthread_join(thread_tratateclado, NULL);

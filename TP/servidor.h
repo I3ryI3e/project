@@ -32,8 +32,8 @@ typedef struct jogadores{
 
 typedef struct tiles{
     int wall;       // 1 = parede indestrutivel   0 = sem parede   -1 = parede destrutivel
-    int powerup;    // -1 = migalha   0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z
-    int explosao;   // explosao da bomba
+    int powerup;    // -1 = migalha   0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z ...
+    int explosao;   // 0 = sem explosao   1 = explosao (da bomba)
     int personagem; // -1 = inimigo   0 = nada   1 = um jogador   2 = dois jogadores ...
 }tile;
 
