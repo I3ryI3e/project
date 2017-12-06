@@ -14,6 +14,7 @@
 #ifndef GAME_H
 #define GAME_H
 #include "Login.h"
+#include <QThread>
 #include  <QObject>
 #include <QGraphicsScene>
 #include <QDialog>
@@ -21,34 +22,35 @@
 #include <string>
 #include <unistd.h>
 #include "dados.h"
-#include <pthread.h>
-#include <signal.h>
+#include "Leitor.h"
 using namespace std;
-
-
 class Game : public QObject{
     Q_OBJECT
+    string fifoname;
+    int     fdfifo;
     Login* login;
     QGraphicsScene *scene;
     QGraphicsView  *view;
-    string fifoname;
-
+    Leitor *leitor;
+    QThread leitorthread;
+    
+    
 public:
-    Game(string fifo);
-    void update(servcom novo);
+    Game(string fifo, int fd);
     ~Game();
-
+signals:
+    void acabar();
 public slots:
     void acaboulogin();
+    void respostalogin(int resposta);
+    void update(servcom novo);
+    signals:
+    
 
 };
 
 
-typedef struct infoglobal{
-    Game* jogo;
-    pthread_t threadid;
-    string fifo;
-}informacao;
+
 
 
 #endif /* GAME_H */

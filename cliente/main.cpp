@@ -18,46 +18,28 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string>
-#include <pthread.h>
 #include <iostream>
+#include <sstream>
 #include "Game.h"
-#include <signal.h>
 
 
 
-informacao info;
-
-void catchsignal(int a){
-    pthread_exit(NULL);
-}
-
-void* lepipe(void* nomefifo){
-    int fd;
-    servcom novo;
-    signal(SIGUSR1,catchsignal);
-    char* fifo=(char*)nomefifo;
-    if((fd=::open(fifo,O_RDWR)) < 0){
-        cout << "Erro a abrir o ficheiro";
-        pthread_exit(NULL);
-    }
-    while(1){
-        ::read(fd,&novo,sizeof(novo));
-        info.jogo->update(novo);        
-    }
-    
-    
-}
 
 int main(int argc, char *argv[]) {
     pid_t pid=getpid();
+    int fdfifo;
     ostringstream fifoname;   
 
     fifoname << "/tmp/fifo" << pid;
-    if(mkfifo(fifoname.str().c_str(),S_IWUSR|S_IRUSR) != 0)
-        exit(-1);
+    if((mkfifo(fifoname.str().c_str(),S_IWUSR|S_IRUSR)) != 0)
+        return 0;
+    if((fdfifo=::open(fifoname.str().c_str(),O_RDWR)) == -1){
+        cout << "Erro a abrir o fifo";
+        return 0;
+    }
     QApplication app(argc, argv);
-    Game novojogo(fifoname.str());
-    info.jogo=&novojogo;
+    qRegisterMetaType<servcom>("servcom");
+    Game novojogo(fifoname.str(),fdfifo);
     return app.exec();
     
 }

@@ -27,12 +27,10 @@ using namespace std;
 
 class Login : public QDialog {
     Q_OBJECT
-    string fifoname;
 public:
-    Login(string fifo);
+    Login();
     virtual ~Login();
 public slots:
-    void on_submitbutton_clicked();
     Ui::Login getWidget();
 private:
     Ui::Login widget;

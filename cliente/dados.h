@@ -15,7 +15,7 @@ typedef struct clienteslogin{
 
 typedef struct clientesmovimento{
     char tecla;
-    char fifopid[10];
+    char fifopid[15];
 }cmov;
 
 typedef struct enemies{
@@ -40,9 +40,11 @@ typedef struct tiles{
 }tile;
 
 typedef struct servidorcomunicacao{
-    tile mapa[20][30];  //campo de jogo
+    tile mapa[21][31];  //campo de jogo
     jogador player;     //informacao do jogador
 }servcom;
+
+
 
 #ifdef __cplusplus
 }
