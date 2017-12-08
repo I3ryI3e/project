@@ -1,15 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   Game.h
- * Author: root
- *
- * Created on November 28, 2017, 4:35 PM
- */
 
 #ifndef GAME_H
 #define GAME_H
@@ -24,6 +13,7 @@
 #include "dados.h"
 #include "Leitor.h"
 using namespace std;
+
 class Game : public QObject{
     Q_OBJECT
     string fifoname;
@@ -33,17 +23,30 @@ class Game : public QObject{
     QGraphicsView  *view;
     Leitor *leitor;
     QThread leitorthread;
+    QSocketNotifier *snUsr1;
+    QSocketNotifier *snUsr2;
+    static int sigurs1fd[2];
+    static int sigurs2fd[2];
     
     
 public:
     Game(string fifo, int fd);
     ~Game();
+    
+    static void catchusr1(int sigunused);
+    static void catchusr2(int sigunused);
+    static int  setup_unix_signal_handlers();
+    
 signals:
     void acabar();
+   
 public slots:
+    void usr1handler(int fd);
+    void usr2handler(int fd);
     void acaboulogin();
     void respostalogin(int resposta);
     void update(servcom novo);
+    
     signals:
     
 

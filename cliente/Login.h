@@ -1,15 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   Login.h
- * Author: root
- *
- * Created on October 28, 2017, 2:57 PM
- */
 
 #ifndef _LOGIN_H
 #define _LOGIN_H
