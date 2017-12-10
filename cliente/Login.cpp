@@ -12,6 +12,7 @@
 Login::Login(){
     widget.setupUi(this);
     widget.submitbutton->hide();
+    widget.errortext->hide();
     widget.passwordtext->setEchoMode(QLineEdit::Password);
     show();
 }

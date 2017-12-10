@@ -120,11 +120,9 @@ void Game::respostalogin(int resposta){
         scene->setSceneRect(0, 0, 800, 600);
     }
     else if(resposta == 0){
-        login->hide();
-        delete login;
-        login=new Login();
-        login->show();
-        connect(login->getWidget().submitbutton,SIGNAL(clicked()),this,SLOT(acaboulogin()));
+        login->getWidget().errortext->show();
+        login->getWidget().usernametext->clear();
+        login->getWidget().passwordtext->clear();
     }else{
         QCoreApplication::quit();
     }

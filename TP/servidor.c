@@ -75,7 +75,7 @@ void kickplayer_ativo(char* cmd){
                 strncpy(token, info.clientes_activos[i].dados_cli.fifopid, 14);
                 sendsig = strtok(token, "o");
                 sendsig = strtok(NULL, "\0");
-                endpid = atoi(token);
+                endpid = atoi(sendsig);
                 kill(endpid, SIGUSR2);                                          //SIGUSR2 = 12
 /*
                 if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
@@ -88,13 +88,19 @@ void kickplayer_ativo(char* cmd){
 */
                 if(i != (info.cli_activos-1))
                     info.clientes_activos[i] = info.clientes_activos[info.cli_activos-1];
+                else if(info.cli_activos == 1){
+                    info.cli_activos=0;
+                    free(info.clientes_activos);
+                    info.clientes_activos=NULL;
+                    return;
+                }
                 if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
                     perror("Erro na realocacao de memoria\n");
                     return;
                 }else{
                     info.clientes_activos=aux;
                     --info.cli_activos;
-                    --info.mapa[copia.atributos_cli.x][copia.atributos_cli.y].personagem;
+                    info.mapa[copia.atributos_cli.x][copia.atributos_cli.y].personagem=0;
                 }
                 i = info.cli_activos;
             }
