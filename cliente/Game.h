@@ -10,6 +10,7 @@
 #include <QGraphicsView>
 #include <string>
 #include <unistd.h>
+#include "Block.h"
 #include "dados.h"
 #include "Leitor.h"
 using namespace std;
@@ -25,10 +26,9 @@ class Game : public QObject{
     QThread leitorthread;
     QSocketNotifier *snUsr1;
     QSocketNotifier *snUsr2;
+    QList<Block*> blocos;
     static int sigurs1fd[2];
     static int sigurs2fd[2];
-    
-    
 public:
     Game(string fifo, int fd);
     ~Game();

@@ -93,18 +93,17 @@ void Game::usr2handler(int fd){
 
 
 void Game::acaboulogin(){
-    clogin novo;
-    int fd,tipomsg;
+    c_clogin novo;
+    int fd;
+    novo.tipo_mensagem=1;
     login->getWidget().usernametext->text().data();
-    strcpy(novo.username,login->getWidget().usernametext->text().toLatin1().data());
-    strcpy(novo.password,login->getWidget().passwordtext->text().toLatin1().data());
-    strcpy(novo.fifopid,fifoname.c_str());
+    strcpy(novo.dados_login.username,login->getWidget().usernametext->text().toLatin1().data());
+    strcpy(novo.dados_login.password,login->getWidget().passwordtext->text().toLatin1().data());
+    strcpy(novo.dados_login.fifopid,fifoname.c_str());
     
     if((fd= (::open("/tmp/fifoserv", O_WRONLY)))< 0){
         return;
     }
-    tipomsg=1;
-    ::write(fd,&tipomsg,sizeof(tipomsg));
     ::write(fd,&novo,sizeof(novo));
     ::close(fd); 
     leitorthread.start();
@@ -128,11 +127,28 @@ void Game::respostalogin(int resposta){
     }
 }
 void Game::update(servcom novo){
-    
+    blocos.clear();
+    Block* novo_bloco;
+    for(int i=0;i<N_LIN;i++){
+        for(int j=0;j>N_COL;j++){
+            if(novo.mapa[i][j].wall == -1){
+                novo_bloco= new Block(true);
+                novo_bloco->setPos(i*BLOCK_HEIGHT,j*BLOCK_WIDTH);
+                blocos.append(novo_bloco);
+                scene->addItem(novo_bloco);
+            }else if(novo.mapa[i][j].wall == 1){
+                novo_bloco= new Block(false);
+                novo_bloco->setPos(i*BLOCK_HEIGHT,j*BLOCK_WIDTH);
+                blocos.append(novo_bloco);
+                scene->addItem(novo_bloco);
+            }
+        }
+    }
 }
 
 Game::~Game(){
-    delete login;
+    if(login!=nullptr) 
+        delete login;
     delete scene;
     delete view;
     emit acabar();

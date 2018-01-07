@@ -1,7 +1,3 @@
-
-
-
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,7 +7,6 @@
 #include <sstream>
 #include "Game.h"
 #include <signal.h>
-
 
 
 int main(int argc, char *argv[]) {
@@ -30,5 +25,4 @@ int main(int argc, char *argv[]) {
     qRegisterMetaType<servcom>("servcom");
     Game novojogo(fifoname.str(),fdfifo);
     return app.exec();
-    
 }
