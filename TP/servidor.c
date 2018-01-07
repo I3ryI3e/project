@@ -8,8 +8,6 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include "servidor.h"
-#define LIN 21
-#define COL 31
 
 infoglobal info;
 pthread_mutex_t lock;
@@ -113,7 +111,6 @@ void kickplayer_ativo(char* cmd){
 int addnewcliente_ativo(clogin newcli, int nmaxplay){
     
     dcli* aux;
-    
     if(info.cli_activos == 0){
         if((info.clientes_activos=malloc(sizeof(dcli))) == NULL){
             perror("Erro na alocacao de memoria\n");
@@ -147,27 +144,34 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
 
 void set_atributos_newcli(){
     
-    int aux;
     info.clientes_activos[info.cli_activos].atributos_cli.bomb=3;
     info.clientes_activos[info.cli_activos].atributos_cli.megabomb=2;
-    info.clientes_activos[info.cli_activos].atributos_cli.nvidas=2;
+    info.clientes_activos[info.cli_activos].atributos_cli.nvidas=3;
     info.clientes_activos[info.cli_activos].atributos_cli.pontuacao=0;
     info.clientes_activos[info.cli_activos].atributos_cli.items=0;
-    aux = rand()%4;
+    re_nascimento(info.cli_activos);
+}
+
+void re_nascimento(int num_cli){
+    int aux = rand()%4;
     if(aux == 0){
-        info.clientes_activos[info.cli_activos].atributos_cli.x=0;
-        info.clientes_activos[info.cli_activos].atributos_cli.y=0;
+        info.clientes_activos[num_cli].atributos_cli.x=0;
+        info.clientes_activos[num_cli].atributos_cli.y=0;
+        ++info.mapa[0][0].personagem;
     }else{
         if(aux == 1){
-            info.clientes_activos[info.cli_activos].atributos_cli.x=0;
-            info.clientes_activos[info.cli_activos].atributos_cli.y=(COL-1);
+            info.clientes_activos[num_cli].atributos_cli.x=0;
+            info.clientes_activos[num_cli].atributos_cli.y=(COL-1);
+            ++info.mapa[0][COL-1].personagem;
         }else{
             if(aux == 2){
-                info.clientes_activos[info.cli_activos].atributos_cli.x=(LIN-1);
-                info.clientes_activos[info.cli_activos].atributos_cli.y=0;
+                info.clientes_activos[num_cli].atributos_cli.x=(LIN-1);
+                info.clientes_activos[num_cli].atributos_cli.y=0;
+                ++info.mapa[LIN-1][0].personagem;
             }else{
-                info.clientes_activos[info.cli_activos].atributos_cli.x=(LIN-1);
-                info.clientes_activos[info.cli_activos].atributos_cli.y=(COL-1);
+                info.clientes_activos[num_cli].atributos_cli.x=(LIN-1);
+                info.clientes_activos[num_cli].atributos_cli.y=(COL-1);
+                ++info.mapa[LIN-1][COL-1].personagem;
             }
         }
     }
@@ -227,22 +231,45 @@ void inicializa_mapa(){
 void trataevalida_tecla(cmov movcli){
     
     dcli aux;
+    int aux_cli;
     for(int i=0;i<info.cli_activos;i++){
         if(strcmp(movcli.fifopid, info.clientes_activos[i].dados_cli.fifopid)==0){
             aux = info.clientes_activos[i];
-            i = info.cli_activos;
+            aux_cli = i = info.cli_activos;
         }
     }
     //if(movcli.tecla == 'b')   //CRIA THREAD
     //if(movcli.tecla == 'm')   //CRIA THREAD
     if(movcli.tecla == 'u'){
-        if(aux.atributos_cli.x == 0)
+        if(aux.atributos_cli.y == 0)
             return;
-        if(info.mapa[aux.atributos_cli.x+1][aux.atributos_cli.y].wall == 0){
-            //if(info.mapa[aux.atributos_cli.x+1][aux.atributos_cli.y].personagem == -1)    //MATAR O JOGADOR???
-            
-            //ACABAR
+        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].wall != 0)
+            return;
+        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].explosao == 1){
+            if(aux.atributos_cli.nvidas == 1){
+                //MORRREEE
+                return;
+            }
+            --aux.atributos_cli.nvidas;
+            --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+            re_nascimento(aux_cli);
+            return;
         }
+        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].personagem < 0){
+            if(aux.atributos_cli.nvidas == 1){
+                //MORRREEE
+                return;
+            }
+            --aux.atributos_cli.nvidas;
+            --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+            re_nascimento(aux_cli);
+            return;
+        }
+        //ACABAR FALTA AS MIGALHAS OS POWERUPS
+    }
+    if(movcli.tecla == 'd'){
+        if(aux.atributos_cli.y == LIN)
+            return;
     }
 }                             //INCOMPLETO
 
@@ -435,6 +462,10 @@ int main(int argc, char** argv){
                         perror("Erro a escrever para cliente\n");
                         break;
                     }
+                    set_struct_tocliente(&dados_jogo, login.fifopid);
+                    if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
+                        perror("Erro a escrever para cliente\n");
+                    }
                 }else{
                     resposta=-1;
                     if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
@@ -442,10 +473,6 @@ int main(int argc, char** argv){
                         close(fifocliente);
                         break;
                     }
-                }
-                set_struct_tocliente(&dados_jogo, login.fifopid);
-                if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){      //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
-                    perror("Erro a escrever para cliente\n");
                 }
             }else{
                 if(write(fifocliente,&resposta,sizeof(resposta)) < 0){          //RESPOSTA = 0 => LOGIN REJEITADO

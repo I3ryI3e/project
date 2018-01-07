@@ -4,6 +4,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define LIN 21
+#define COL 31
     
 typedef struct clienteslogin{
     char username[30];
@@ -31,14 +34,14 @@ typedef struct jogadores{
 }jogador;
 
 typedef struct tiles{
-    int wall;       // 1 = parede indestrutivel   0 = sem parede   -1 = parede destrutivel
+    int wall;       // 0 = sem parede   1 = parede indestrutivel   2 = parede destrutivel
     int powerup;    // -1 = migalha   0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z ...
     int explosao;   // 0 = sem explosao   1 = explosao (da bomba)
-    int personagem; // -1 = inimigo   0 = nada   1 = um jogador   2 = dois jogadores ...
+    int personagem; // -2 = dois inimigos   -1 = um inimigo   0 = nada   1 = um jogador   2 = dois jogadores ...
 }tile;
 
 typedef struct servidorcomunicacao{
-    tile mapa[21][31];  //campo de jogo
+    tile mapa[LIN][COL];  //campo de jogo
     jogador player;     //informacao do jogador
 }servcom;
 
@@ -50,7 +53,7 @@ typedef struct dadoscliente{
 typedef struct infoglobal{
     dcli* clientes_activos;
     int cli_activos;
-    tile mapa[21][31];
+    tile mapa[LIN][COL];
     char nomefich[30];
     int continua;
 }infoglobal;
@@ -62,6 +65,8 @@ void kickplayer_ativo(char* cmd);
 int addnewcliente_ativo(clogin newcli, int nmaxplay);
 
 void set_atributos_newcli();
+
+void re_nascimento(int num_cli);
 
 void set_struct_tocliente(servcom* data, char fpid[15]);
 
@@ -82,4 +87,3 @@ void shutdown_sigusr1(int sig);
 #endif
 
 #endif /* SERVIDOR_H */
-
