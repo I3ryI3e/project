@@ -1,9 +1,4 @@
-
-
 #include "Leitor.h"
-
-
-
 
 Leitor::Leitor(int fd):fifo(fd), ajogar(0){
 }
