@@ -12,8 +12,7 @@
 infoglobal info;
 pthread_mutex_t lock;
 
-void adduser(char* nomefich, char* cmd){
-    
+void adduser(char* nomefich, char* cmd){  
     FILE *f;
     clogin new, aux;
     int flag=0;
@@ -56,8 +55,7 @@ void adduser(char* nomefich, char* cmd){
     return;
 }
 
-void kickplayer_ativo(char* cmd){
-    
+void kickplayer_ativo(char* cmd){  
     char* token;
     char* sendsig;
     char* kickplayer;
@@ -106,10 +104,9 @@ void kickplayer_ativo(char* cmd){
     }else{
         perror("Erro: parametros invalidos\n");
     }
-}                                 //NUMERO DO KICK
+}                                 //NUMERO DO KICK - MUDAR ISTO
 
-int addnewcliente_ativo(clogin newcli, int nmaxplay){
-    
+int addnewcliente_ativo(clogin newcli, int nmaxplay){ 
     dcli* aux;
     if(info.cli_activos == 0){
         if((info.clientes_activos=malloc(sizeof(dcli))) == NULL){
@@ -142,8 +139,7 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
     }
 }             //USA OS MUTEXES
 
-void set_atributos_newcli(){
-    
+void set_atributos_newcli(){  
     info.clientes_activos[info.cli_activos].atributos_cli.bomb=3;
     info.clientes_activos[info.cli_activos].atributos_cli.megabomb=2;
     info.clientes_activos[info.cli_activos].atributos_cli.nvidas=3;
@@ -175,10 +171,9 @@ void re_nascimento(int num_cli){
             }
         }
     }
-}
+}                                  //NAO PODEM EXISTIR DOIS INIMIGOS NEM DOIS JOGADORES NA MESMA POSICAO!!! :O
 
 void set_struct_tocliente(servcom* data, char fpid[15]){
-
     for(int i=0;i<info.cli_activos;i++){
         if((strcmp(fpid, info.clientes_activos[i].dados_cli.fifopid) == 0)){
             data->player.x = info.clientes_activos[i].atributos_cli.x;
@@ -201,35 +196,81 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
     }
 }
 
-void inicializa_mapa(){
+void inicializa_mapa(int n_migalhas){
+    int aux, mig=1, i, j;
     
-    int aux;
-    
-    for(int i=0;i<LIN;i++){
-        for(int j=0;j<COL;j++){
-            info.mapa[i][j].explosao=0;
-            info.mapa[i][j].powerup=0;
-            info.mapa[i][j].personagem=0;
+    for(i=0;i<LIN;i++){
+        for(j=0;j<COL;j++){
+            info.mapa[i][j].explosao = 0;
+            info.mapa[i][j].powerup = 0;
+            info.mapa[i][j].personagem = 0;
             if((i==0 && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==1 && (j==0 || j==(COL-1))) ||
                     (i==(LIN-1) && (j==0 || j==1 || j==(COL-2) || j==(COL-1))) || (i==(LIN-2) && (j==0 || j==(COL-1)))){
-                info.mapa[i][j].wall=0;
-            }else if(i%2 != 0 && j%2 != 0){
-                info.mapa[i][j].wall=1;
+                info.mapa[i][j].wall = 0;
             }else{
-                aux = (rand()%100);
-                if(aux < 79)
-                    info.mapa[i][j].wall=2;
-                else
-                    info.mapa[i][j].wall=0;
+                if(i%2 != 0 && j%2 != 0){
+                    info.mapa[i][j].wall = 1;
+                }else{
+                    aux = (rand()%100);
+                    if(aux < 69){
+                        info.mapa[i][j].wall = 2;
+                    }else{
+                        if(mig && n_migalhas > 0){
+                            info.mapa[i][j].wall = -1;
+                            --n_migalhas;
+                            mig = (rand()%3)+1;
+                        }else{
+                            info.mapa[i][j].wall = 0;
+                            --mig;
+                        }
+                    }
+                }
             }
         }
     }
-    //FAZER AS MIGALHAS
+    while(n_migalhas > 0){
+        i = (rand()%(LIN-1));
+        j = (rand()%(COL-1));
+        if(info.mapa[i][j].wall == 2){
+            info.mapa[i][j].wall = -1;
+            --n_migalhas;
+        }   
+    }
     return;
-}                                           //FAZER MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
+}                             //VERFICA MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
-void trataevalida_tecla(cmov movcli){
-    
+void updownleftrigth(int x, int y, int n_cli, dcli aux){
+    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].wall != 0)
+            return;
+    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].explosao == 1){
+        if(aux.atributos_cli.nvidas == 1){
+            //MORRREEE
+            return;
+        }
+        --aux.atributos_cli.nvidas;
+        --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+        re_nascimento(n_cli);
+        return;
+    }
+    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].personagem == -1){
+        if(aux.atributos_cli.nvidas == 1){
+            //MORRREEE
+            return;
+        }
+        --aux.atributos_cli.nvidas;
+        --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+        re_nascimento(n_cli);
+        return;
+    }
+    --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+    ++info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].personagem;
+    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].wall == -1){
+        //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
+    }
+    //ACABAR FALTA AS MIGALHAS OS POWERUPS
+}           //INCOMPLETO + FALTA VER QUANDO SE MEXEM OS INIMIGOS
+
+void trataevalida_tecla(cmov movcli){   
     dcli aux;
     int aux_cli;
     for(int i=0;i<info.cli_activos;i++){
@@ -240,41 +281,31 @@ void trataevalida_tecla(cmov movcli){
     }
     //if(movcli.tecla == 'b')   //CRIA THREAD
     //if(movcli.tecla == 'm')   //CRIA THREAD
+    //VERIFICA SE TEM UM INIMIGO NO SITIO ONDE ESTÁ, ANTES DE SER TER MEXIDO
+    //TEM QUE SER MUDADO PORQUE O UTILIZADOR PODE TAR QUIETO E OS INIMIGOS E QUE VAO AO LUGAR DELE
     if(movcli.tecla == 'u'){
         if(aux.atributos_cli.y == 0)
             return;
-        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].wall != 0)
-            return;
-        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].explosao == 1){
-            if(aux.atributos_cli.nvidas == 1){
-                //MORRREEE
-                return;
-            }
-            --aux.atributos_cli.nvidas;
-            --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
-            re_nascimento(aux_cli);
-            return;
-        }
-        if(info.mapa[aux.atributos_cli.x][aux.atributos_cli.y+1].personagem < 0){
-            if(aux.atributos_cli.nvidas == 1){
-                //MORRREEE
-                return;
-            }
-            --aux.atributos_cli.nvidas;
-            --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
-            re_nascimento(aux_cli);
-            return;
-        }
-        //ACABAR FALTA AS MIGALHAS OS POWERUPS
+        updownleftrigth(0, 1, aux_cli, aux);
     }
     if(movcli.tecla == 'd'){
-        if(aux.atributos_cli.y == LIN)
+        if(aux.atributos_cli.y == (LIN-1))
             return;
+        updownleftrigth(0, -1, aux_cli, aux);
     }
-}                             //INCOMPLETO
+    if(movcli.tecla == 'l'){
+        if(aux.atributos_cli.x == 0)
+            return;
+        updownleftrigth(-1, 0, aux_cli, aux);
+    }
+    if(movcli.tecla == 'r'){
+        if(aux.atributos_cli.x == (COL-1))
+            return;
+        updownleftrigth(1, 0, aux_cli, aux);
+    }
+}
 
-void* tratateclado(void* tratacmd_running){
-    
+void* tratateclado(void* tratacmd_running){  
     char* cmd;
     char linha[100], token[100];
     int openfifo, encerrar=0;
@@ -345,8 +376,7 @@ void thread_sigusr2(int sig){
     pthread_exit(NULL);
 }
 
-void shutdown_sigusr1(int sig){
-    
+void shutdown_sigusr1(int sig){  
     int openfifo, encerrar=0;
     if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
             perror("Erro ao abrir o fifo\n");
@@ -361,8 +391,7 @@ void shutdown_sigusr1(int sig){
         return;
 }
 
-int cliente_reconhecido(char* nomefich, clogin teste){
-    
+int cliente_reconhecido(char* nomefich, clogin teste){ 
     FILE *f;
     clogin aux;
     
@@ -384,7 +413,6 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 }
 
 int main(int argc, char** argv){
-
     int openfifo, tipomsg, resposta, fifocliente, tratacmd_running=1;
     int nobject, nenemy, nmaxplay, endpid;
     char token[15];
@@ -431,7 +459,7 @@ int main(int argc, char** argv){
     strcpy(info.nomefich, argv[1]);                                           
     info.clientes_activos=NULL;
     info.continua=1;
-    inicializa_mapa();
+    inicializa_mapa(nobject);
     
     if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&tratacmd_running) != 0){
         perror("Erro ao criar a thread\n");
