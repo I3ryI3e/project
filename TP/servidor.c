@@ -215,7 +215,7 @@ void inicializa_mapa(int n_migalhas){
                     if(aux < 69){
                         info.mapa[i][j].wall = 2;
                     }else{
-                        if(mig && n_migalhas > 0){
+                        if(mig==1 && n_migalhas > 0){
                             info.mapa[i][j].wall = -1;
                             --n_migalhas;
                             mig = (rand()%3)+1;
@@ -231,7 +231,7 @@ void inicializa_mapa(int n_migalhas){
     while(n_migalhas > 0){
         i = (rand()%(LIN-1));
         j = (rand()%(COL-1));
-        if(info.mapa[i][j].wall == 2){
+        if(info.mapa[i][j].wall == 2 || info.mapa[i][j].wall == 0){
             info.mapa[i][j].wall = -1;
             --n_migalhas;
         }   
@@ -239,44 +239,43 @@ void inicializa_mapa(int n_migalhas){
     return;
 }                             //VERFICA MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
-void updownleftrigth(int x, int y, int n_cli, dcli aux){
-    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].wall != 0)
+void updownleftrigth(int x, int y, int n_cli){
+    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].wall > 0)
             return;
-    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].explosao == 1){
-        if(aux.atributos_cli.nvidas == 1){
+    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].explosao == 1){
+        if(info.clientes_activos[n_cli].atributos_cli.nvidas == 1){
             //MORRREEE
             return;
         }
-        --aux.atributos_cli.nvidas;
-        --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+        --info.clientes_activos[n_cli].atributos_cli.nvidas;
+        --info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem;
         re_nascimento(n_cli);
         return;
     }
-    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].personagem == -1){
-        if(aux.atributos_cli.nvidas == 1){
+    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].personagem == -1){
+        if(info.clientes_activos[n_cli].atributos_cli.nvidas == 1){
             //MORRREEE
             return;
         }
-        --aux.atributos_cli.nvidas;
-        --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
+        --info.clientes_activos[n_cli].atributos_cli.nvidas;
+        --info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem;
         re_nascimento(n_cli);
         return;
     }
-    --info.mapa[aux.atributos_cli.x][aux.atributos_cli.y].personagem;
-    ++info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].personagem;
-    if(info.mapa[aux.atributos_cli.x+x][aux.atributos_cli.y+y].wall == -1){
+    --info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem;
+    ++info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].personagem;
+    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].wall == -1){
         //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
     }
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
 }           //INCOMPLETO + FALTA VER QUANDO SE MEXEM OS INIMIGOS
 
 void trataevalida_tecla(cmov movcli){   
-    dcli aux;
     int aux_cli;
     for(int i=0;i<info.cli_activos;i++){
         if(strcmp(movcli.fifopid, info.clientes_activos[i].dados_cli.fifopid)==0){
-            aux = info.clientes_activos[i];
-            aux_cli = i = info.cli_activos;
+            aux_cli = i;
+            i = info.cli_activos;
         }
     }
     //if(movcli.tecla == 'b')   //CRIA THREAD
@@ -284,24 +283,24 @@ void trataevalida_tecla(cmov movcli){
     //VERIFICA SE TEM UM INIMIGO NO SITIO ONDE ESTÁ, ANTES DE SER TER MEXIDO
     //TEM QUE SER MUDADO PORQUE O UTILIZADOR PODE TAR QUIETO E OS INIMIGOS E QUE VAO AO LUGAR DELE
     if(movcli.tecla == 'u'){
-        if(aux.atributos_cli.y == 0)
+        if(info.clientes_activos[aux_cli].atributos_cli.y == 0)
             return;
-        updownleftrigth(0, 1, aux_cli, aux);
+        updownleftrigth(0, 1, aux_cli);
     }
     if(movcli.tecla == 'd'){
-        if(aux.atributos_cli.y == (LIN-1))
+        if(info.clientes_activos[aux_cli].atributos_cli.y == (LIN-1))
             return;
-        updownleftrigth(0, -1, aux_cli, aux);
+        updownleftrigth(0, -1, aux_cli);
     }
     if(movcli.tecla == 'l'){
-        if(aux.atributos_cli.x == 0)
+        if(info.clientes_activos[aux_cli].atributos_cli.x == 0)
             return;
-        updownleftrigth(-1, 0, aux_cli, aux);
+        updownleftrigth(-1, 0, aux_cli);
     }
     if(movcli.tecla == 'r'){
-        if(aux.atributos_cli.x == (COL-1))
+        if(info.clientes_activos[aux_cli].atributos_cli.x == (COL-1))
             return;
-        updownleftrigth(1, 0, aux_cli, aux);
+        updownleftrigth(1, 0, aux_cli);
     }
 }
 

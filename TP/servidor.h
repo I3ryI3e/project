@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#define LIN 21
+#define LIN 31
 #define COL 31
     
 typedef struct clienteslogin{
@@ -37,12 +37,13 @@ typedef struct tiles{
     int wall;       // -1 = migalha   0 = sem parede   1 = parede indestrutivel   2 = parede destrutivel
     int powerup;    // 0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z ...
     int explosao;   // 0 = sem explosao   1 = explosao (da bomba)
-    int personagem; // -1 = um inimigo   0 = nada   1 = um jogador   2 = dois jogadores ...
+    int personagem; // -1 = um inimigo   0 = nada   1 = um jogador
 }tile;
 
 typedef struct servidorcomunicacao{
-    tile mapa[LIN][COL];  //campo de jogo
-    jogador player;     //informacao do jogador
+    tile mapa[LIN][COL];    //campo de jogo
+    jogador player;         //informacao do jogador
+    int estado;             //
 }servcom;
 
 typedef struct dadoscliente{
@@ -72,7 +73,7 @@ void set_struct_tocliente(servcom* data, char fpid[15]);
 
 void inicializa_mapa(int n_migalhas);
 
-void updownleftrigth(int x, int y, int n_cli, dcli aux);
+void updownleftrigth(int x, int y, int n_cli);
 
 void trataevalida_tecla(cmov movcli);
 
