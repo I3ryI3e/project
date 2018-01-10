@@ -41,9 +41,9 @@ typedef struct tiles{
 }tile;
 
 typedef struct servidorcomunicacao{
+    int estado;             // 0 = jogo a decorrer   1 = acabou   2 = kick
     tile mapa[LIN][COL];    //campo de jogo
     jogador player;         //informacao do jogador
-    int estado;             //
 }servcom;
 
 typedef struct dadoscliente{
