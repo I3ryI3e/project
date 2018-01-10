@@ -114,9 +114,12 @@ void Game::respostalogin(int resposta){
         login->hide();
         delete login;
         login=nullptr;
+        scene->setSceneRect(0, 0, 1024, 800);
+        view->setScene(scene);
+        view->setFixedSize(1024, 800);
+        view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         view->show();
-        view->setFixedSize(800, 600);
-        scene->setSceneRect(0, 0, 800, 600);
     }
     else if(resposta == 0){
         login->getWidget().errortext->show();
@@ -127,23 +130,48 @@ void Game::respostalogin(int resposta){
     }
 }
 void Game::update(servcom novo){
-    blocos.clear();
+    blocosdestrutiveis.clear();
+    blocosindestrutiveis.clear();
+    qDeleteAll(scene->items());
     Block* novo_bloco;
-    for(int i=0;i<N_LIN;i++){
-        for(int j=0;j>N_COL;j++){
-            if(novo.mapa[i][j].wall == -1){
-                novo_bloco= new Block(true);
-                novo_bloco->setPos(i*BLOCK_HEIGHT,j*BLOCK_WIDTH);
-                blocos.append(novo_bloco);
-                scene->addItem(novo_bloco);
-            }else if(novo.mapa[i][j].wall == 1){
+    Player* novo_player;
+    for(int i=0;i<=N_LIN+1;i++){
+        for(int j=0;j<=N_COL+1;j++){
+            if(i==0 || i == (N_LIN+1)){
                 novo_bloco= new Block(false);
-                novo_bloco->setPos(i*BLOCK_HEIGHT,j*BLOCK_WIDTH);
-                blocos.append(novo_bloco);
+                novo_bloco->setPos(i*20,j*20);
+                blocosindestrutiveis.append(novo_bloco);
+                scene->addItem(novo_bloco);
+            }else if(j==0 || j==(N_COL+1)){
+                novo_bloco= new Block(false);
+                novo_bloco->setPos(i*20,j*20);
+                blocosindestrutiveis.append(novo_bloco);
                 scene->addItem(novo_bloco);
             }
         }
     }
+    for(int i=0;i<N_LIN;i++){
+        for(int j=0;j<N_COL;j++){
+            if(novo.mapa[i][j].wall == 2){
+                novo_bloco= new Block(true);
+                novo_bloco->setPos(((i*20)+20),((j*20)+20));
+                blocosdestrutiveis.append(novo_bloco);
+                scene->addItem(novo_bloco);
+            }else if(novo.mapa[i][j].wall == 1){
+                novo_bloco= new Block(false);
+                novo_bloco->setPos(((i*20)+20),((j*20)+20));
+                blocosindestrutiveis.append(novo_bloco);
+                scene->addItem(novo_bloco);
+            }
+        }
+    }
+    novo_player = new Player();
+    novo_player->setPos((novo.player.x*20+20),(novo.player.y*20+20));
+    jogadoresativos.append(novo_player);
+    novo_player->setFlag(QGraphicsItem::ItemIsFocusable);
+    novo_player->setFocus();
+    scene->addItem(novo_player);
+
 }
 
 Game::~Game(){

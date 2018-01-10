@@ -9,6 +9,7 @@
 class Player : public QObject, public QGraphicsRectItem {
     Q_OBJECT
 public:
+    Player();
    void keyPressEvent(QKeyEvent* event) override;
    public slots:
 private:

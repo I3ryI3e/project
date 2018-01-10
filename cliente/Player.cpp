@@ -2,6 +2,16 @@
 
 #include "Player.h"
 #include <QKeyEvent>
+#include <QBrush>
+#include <QPen>
+
+
+Player::Player(){
+    setRect(0, 0, 20, 20);
+    
+	setPen(QPen(Qt::blue));
+	setBrush(QBrush(Qt::blue));
+}
 
 void Player::keyPressEvent(QKeyEvent* event){
     if( event->key() == Qt::Key_Left){

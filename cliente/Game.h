@@ -11,6 +11,7 @@
 #include <string>
 #include <unistd.h>
 #include "Block.h"
+#include "Player.h"
 #include "dados.h"
 #include "Leitor.h"
 using namespace std;
@@ -26,7 +27,9 @@ class Game : public QObject{
     QThread leitorthread;
     QSocketNotifier *snUsr1;
     QSocketNotifier *snUsr2;
-    QList<Block*> blocos;
+    QList<Block*> blocosdestrutiveis;
+    QList<Block*> blocosindestrutiveis;
+    QList<Player*> jogadoresativos;
     static int sigurs1fd[2];
     static int sigurs2fd[2];
 public:
