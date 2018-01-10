@@ -1,31 +1,29 @@
 
 
 #include "Player.h"
+#include "dados.h"
 #include <QKeyEvent>
 #include <QBrush>
 #include <QPen>
 
 
 Player::Player(){
-    setRect(0, 0, 20, 20);
-    
-	setPen(QPen(Qt::blue));
-	setBrush(QBrush(Qt::blue));
+    setPixmap(QPixmap("./BomberManAzul0.jpeg").scaled(20,20,Qt::KeepAspectRatio));
 }
 
 void Player::keyPressEvent(QKeyEvent* event){
     if( event->key() == Qt::Key_Left){
-        if(pos().x() > 0 )
-            setPos(x()-10,y());
+        if(pos().x() > 20 )
+            setPos(x()-20,y());
     }else if( event->key() == Qt::Key_Right){
-        if(pos().x() + 100 < 800)
-            setPos(x()+10,y());
+        if(pos().x() + 20 < 440)
+            setPos(x()+20,y());
     }else if( event->key() == Qt::Key_Down){
-        if(pos().y() + 100 < 600)
-            setPos(x(),y()+10);
+        if(pos().y() + 20 < 640)
+            setPos(x(),y()+20);
     }else if( event->key() == Qt::Key_Up){
-        if(pos().y() > 0 )
-            setPos(x(),y()-10);
+        if(pos().y() > 20 )
+            setPos(x(),y()-20);
     }
 }
 
