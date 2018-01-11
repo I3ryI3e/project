@@ -77,7 +77,9 @@ void updownleftrigth(int x, int y, int n_cli);
 
 void trataevalida_tecla(cmov movcli);
 
-void* tratateclado();
+void* tratateclado(void* tratacmd_running);
+
+//void*printenemyxy(void *threadarg);
 
 int cliente_reconhecido(char* nomefich, clogin teste);
 

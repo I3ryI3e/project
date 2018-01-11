@@ -109,7 +109,6 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
         }else{
             info.clientes_activos[info.cli_activos].dados_cli = newcli;
             set_atributos_newcli();
-            ++info.mapa[info.clientes_activos[info.cli_activos].atributos_cli.x][info.clientes_activos[info.cli_activos].atributos_cli.y].personagem;
             info.cli_activos=1;
             return 1;
         }
@@ -126,7 +125,6 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             info.clientes_activos=aux;
             info.clientes_activos[info.cli_activos].dados_cli = newcli;
             set_atributos_newcli();
-            ++info.mapa[info.clientes_activos[info.cli_activos].atributos_cli.x][info.clientes_activos[info.cli_activos].atributos_cli.y].personagem;
             ++info.cli_activos;
             return 1;
         }
@@ -189,7 +187,7 @@ void re_nascimento(int num_cli){
             }
         }
     }
-}                                  //NAO PODEM EXISTIR DOIS INIMIGOS NEM DOIS JOGADORES NA MESMA POSICAO!!! :O
+}
 
 void set_struct_tocliente(servcom* data, char fpid[15]){
     for(int i=0;i<info.cli_activos;i++){
@@ -236,7 +234,7 @@ void inicializa_mapa(int n_migalhas){
                         if(mig==1 && n_migalhas > 0){
                             info.mapa[i][j].wall = -1;
                             --n_migalhas;
-                            mig = (rand()%3)+1;
+                            mig = (rand()%10)+1;
                         }else{
                             info.mapa[i][j].wall = 0;
                             --mig;
@@ -298,7 +296,7 @@ void trataevalida_tecla(cmov movcli){
     }
     //if(movcli.tecla == 'b')   //CRIA THREAD
     //if(movcli.tecla == 'm')   //CRIA THREAD
-    //VERIFICA SE TEM UM INIMIGO NO SITIO ONDE ESTÁ, ANTES DE SER TER MEXIDO
+    //VERIFICA SE TEM UM INIMIGO NO SITIO ONDE ESTÁ, ANTES DE SER MEXIDO
     //TEM QUE SER MUDADO PORQUE O UTILIZADOR PODE TAR QUIETO E OS INIMIGOS E QUE VAO AO LUGAR DELE
     if(movcli.tecla == 'u'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == 0)
@@ -389,6 +387,16 @@ void* tratateclado(void* tratacmd_running){
     pthread_exit(NULL);
 }
 
+/*
+void* printenemyxy(void *threadarg){
+    
+    enemy *data;
+    data = (enemy*) threadarg;
+    printf("\n%d", data->powerup);
+    pthread_exit(NULL);
+}
+*/
+
 void thread_sigusr2(int sig){
     pthread_exit(NULL);
 }
@@ -452,6 +460,12 @@ int main(int argc, char** argv){
         nenemy=(rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
+    
+/*
+    pthread_t enemies[nenemy];
+    enemy enemies_data[nenemy];
+*/
+    
     if(getenv("NMAXPLAY") == NULL)
         nmaxplay=(rand()%20)+1;
     else
@@ -482,6 +496,15 @@ int main(int argc, char** argv){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
+    
+/*
+    for(int i=0;i<nenemy;i++){
+        if(pthread_create(&enemies[i], NULL, printenemyxy, (void*)&enemies_data[i]) != 0){
+            perror("Erro ao criar a thread\n");
+            return(EXIT_FAILURE);
+        }
+    }
+*/
     
     while(info.continua){
         if(read(openfifo,&tipomsg,sizeof(tipomsg)) < 0){
