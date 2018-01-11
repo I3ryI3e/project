@@ -6,7 +6,7 @@
 Block::Block(bool edestrutivel) : destrutivel(edestrutivel){
     setRect(0, 0, 20, 20);
     if (destrutivel) {
-	setPen(QPen(Qt::gray));
+	setPen(QPen(Qt::black));
 	setBrush(QBrush(Qt::gray));
     } else {
 	setBrush(QBrush(Qt::darkGray));
