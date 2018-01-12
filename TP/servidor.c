@@ -211,7 +211,7 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
 }
 
 void inicializa_mapa(int n_migalhas){
-    int aux, mig=2, i, j, mig_aux = n_migalhas;
+    int aux, mig=2, i, j, mig_aux = n_migalhas/2;
     
     for(i=0;i<LIN;i++){
         for(j=0;j<COL;j++){
@@ -229,7 +229,7 @@ void inicializa_mapa(int n_migalhas){
                     if(aux < 69){
                         info.mapa[i][j].wall = 2;
                     }else{
-                        if(mig==1 && mig_aux/2 > n_migalhas){
+                        if(mig==1 && mig_aux > 0){
                             info.mapa[i][j].wall = 3;
                             --mig_aux;
                             mig = (rand()%10)+1;
@@ -243,6 +243,7 @@ void inicializa_mapa(int n_migalhas){
         }
     }
     mig=2;
+    mig_aux = (n_migalhas/2) + (n_migalhas%2);
     for(i=LIN-1;i>=0;i--){
         for(j=COL-1;j>=0;j--){
             if(info.mapa[i][j].wall == 0){
@@ -256,16 +257,6 @@ void inicializa_mapa(int n_migalhas){
             }
         }
     }
-/*
-    while(n_migalhas > 0){
-        i = (rand()%(LIN-1));
-        j = (rand()%(COL-1));
-        if(info.mapa[i][j].wall == 2 || info.mapa[i][j].wall == 0){
-            info.mapa[i][j].wall = 3;
-            --n_migalhas;
-        }   
-    }
-*/
     return;
 }                             //VERFICA MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
@@ -426,7 +417,7 @@ void* tratateclado(void* data_trata_cmd){
             //pthread_mutex_lock(&lock);
             info.continua=0;
             //pthread_mutex_unlock(&lock);
-            *((int*)data->estado_thread)=0;
+            data->estado_thread=0;
             if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
                 perror("Erro ao escrever para fifo\n");
             }
