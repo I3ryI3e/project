@@ -59,7 +59,6 @@ void kickplayer_ativo(char* cmd){
     char* token;
     char* kickplayer;
     dcli* aux;
-    dcli copia;
     servcom kick;
     int fifoaux;
     
@@ -67,15 +66,6 @@ void kickplayer_ativo(char* cmd){
     if((kickplayer = strtok(NULL, " ")) != NULL){
         for(int i=0;i<info.cli_activos;i++){
             if(strcmp(kickplayer, info.clientes_activos[i].dados_cli.username)==0){
-                copia = info.clientes_activos[i];
-                if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
-                    perror("Erro ao abrir o fifo cliente\n");
-                    return;
-                }
-                kick.estado = 2;
-                if(write(fifoaux,&kick,sizeof(kick)) < 0){
-                    perror("Erro ao escrever para fifo\n");
-                }
                 if(i != (info.cli_activos-1))
                     info.clientes_activos[i] = info.clientes_activos[info.cli_activos-1];
                 else if(info.cli_activos == 1){
@@ -90,9 +80,17 @@ void kickplayer_ativo(char* cmd){
                 }else{
                     info.clientes_activos=aux;
                     --info.cli_activos;
-                    info.mapa[copia.atributos_cli.x][copia.atributos_cli.y].personagem = 0;
+                    info.mapa[info.clientes_activos[i].atributos_cli.x][info.clientes_activos[i].atributos_cli.y].personagem = 0;
                 }
                 i = info.cli_activos;
+                if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
+                    perror("Erro ao abrir o fifo cliente\n");
+                    return;
+                }
+                kick.estado = 2;
+                if(write(fifoaux,&kick,sizeof(kick)) < 0){
+                    perror("Erro ao escrever para fifo\n");
+                }
             }
         }
     }else{
@@ -113,9 +111,9 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             return 1;
         }
     }
-    if(nmaxplay == 1)
-        return 0;
-    if((info.cli_activos+1) == nmaxplay){
+    //if(nmaxplay == 1)
+    //    return 0;
+    if((info.cli_activos+1) == nmaxplay || nmaxplay == 1){
         return 0;
     }else{
         if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos+1)))) == NULL){
@@ -151,7 +149,7 @@ void re_nascimento(int num_cli){
         }
     }else{
         if(aux == 1){
-            if(info.mapa[0][0].personagem == 0){
+            if(info.mapa[0][COL-1].personagem == 0){
                 info.clientes_activos[num_cli].atributos_cli.x=0;
                 info.clientes_activos[num_cli].atributos_cli.y=(COL-1);
                 info.mapa[0][COL-1].personagem = 1;
@@ -159,14 +157,14 @@ void re_nascimento(int num_cli){
             }
         }else{
             if(aux == 2){
-                if(info.mapa[0][0].personagem == 0){
+                if(info.mapa[LIN-1][0].personagem == 0){
                     info.clientes_activos[num_cli].atributos_cli.x=(LIN-1);
                     info.clientes_activos[num_cli].atributos_cli.y=0;
                     info.mapa[LIN-1][0].personagem = 1;
                     return;
                 }
             }else{
-                if(info.mapa[0][0].personagem == 0){
+                if(info.mapa[LIN-1][COL-1].personagem == 0){
                     info.clientes_activos[num_cli].atributos_cli.x=(LIN-1);
                     info.clientes_activos[num_cli].atributos_cli.y=(COL-1);
                     info.mapa[LIN-1][COL-1].personagem = 1;
@@ -213,7 +211,7 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
 }
 
 void inicializa_mapa(int n_migalhas){
-    int aux, mig=1, i, j;
+    int aux, mig=2, i, j, mig_aux = n_migalhas;
     
     for(i=0;i<LIN;i++){
         for(j=0;j<COL;j++){
@@ -231,9 +229,9 @@ void inicializa_mapa(int n_migalhas){
                     if(aux < 69){
                         info.mapa[i][j].wall = 2;
                     }else{
-                        if(mig==1 && n_migalhas > 0){
-                            info.mapa[i][j].wall = -1;
-                            --n_migalhas;
+                        if(mig==1 && mig_aux/2 > n_migalhas){
+                            info.mapa[i][j].wall = 3;
+                            --mig_aux;
                             mig = (rand()%10)+1;
                         }else{
                             info.mapa[i][j].wall = 0;
@@ -244,50 +242,74 @@ void inicializa_mapa(int n_migalhas){
             }
         }
     }
+    mig=2;
+    for(i=LIN-1;i>=0;i--){
+        for(j=COL-1;j>=0;j--){
+            if(info.mapa[i][j].wall == 0){
+                if(mig==1 && mig_aux > 0){
+                    info.mapa[i][j].wall = 3;
+                    --mig_aux;
+                    mig = (rand()%10)+1;
+                }else{
+                    --mig;
+                }
+            }
+        }
+    }
+/*
     while(n_migalhas > 0){
         i = (rand()%(LIN-1));
         j = (rand()%(COL-1));
         if(info.mapa[i][j].wall == 2 || info.mapa[i][j].wall == 0){
-            info.mapa[i][j].wall = -1;
+            info.mapa[i][j].wall = 3;
             --n_migalhas;
         }   
     }
+*/
     return;
 }                             //VERFICA MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
-void updownleftrigth(int x, int y, int n_cli){
-    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].wall > 0)
-            return;
-    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].explosao == 1){
-        if(info.clientes_activos[n_cli].atributos_cli.nvidas == 1){
-            //MORRREEE
-            return;
+int updownleftrigth(int x, int y, int x_atual, int y_atual){
+    if(info.mapa[x_atual+x][y_atual+y].wall == 1 || info.mapa[x_atual+x][y_atual+y].wall == 2)
+            return 0;
+    if(info.mapa[x_atual+x][y_atual+y].explosao > 0){
+        if(info.mapa[x_atual][y_atual].personagem == -1){
+            info.mapa[x_atual][y_atual].personagem = 0;
+            return 1;   //MORRE INIMIGO
+        }else{
+            info.mapa[x_atual][y_atual].personagem = 0;
+            return 1;   //MORRE CLIENTE
         }
-        --info.clientes_activos[n_cli].atributos_cli.nvidas;
-        info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem = 0;
-        re_nascimento(n_cli);
-        return;
     }
-    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].personagem == -1){
-        if(info.clientes_activos[n_cli].atributos_cli.nvidas == 1){
-            //MORRREEE
-            return;
+    if(info.mapa[x_atual][y_atual].personagem == -1){
+        if(info.mapa[x_atual+x][y_atual+y].personagem == 1){
+            info.mapa[x_atual][y_atual].personagem = 0;
+            info.mapa[x_atual+x][y_atual+y].personagem = -1;
+            return ;    //MOASDNOASDNAOISDNASDON
         }
-        --info.clientes_activos[n_cli].atributos_cli.nvidas;
-        info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem = 0;
-        re_nascimento(n_cli);
-        return;
-    }
-    info.mapa[info.clientes_activos[n_cli].atributos_cli.x][info.clientes_activos[n_cli].atributos_cli.y].personagem = 0;
-    info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].personagem = 1;
-    if(info.mapa[info.clientes_activos[n_cli].atributos_cli.x+x][info.clientes_activos[n_cli].atributos_cli.y+y].wall == -1){
-        //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
+        if(info.mapa[x_atual+x][y_atual+y].personagem != -1){
+            info.mapa[x_atual][y_atual].personagem = 0;
+            info.mapa[x_atual+x][y_atual+y].personagem = -1;
+        }
+        return 0;
+    }else{
+        if(info.mapa[x_atual+x][y_atual+y].personagem == -1){
+            info.mapa[x_atual][y_atual].personagem = 0;
+            return 1;   //MORRE CLIENTE
+        }
+        if(info.mapa[x_atual+x][y_atual+y].personagem == 1)
+            return 0;
+        info.mapa[x_atual][y_atual].personagem = 0;
+        info.mapa[x_atual+x][y_atual+y].personagem = 1;
+        if(info.mapa[x_atual+x][y_atual+y].wall == 3){
+            //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
+        }
     }
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
-}           //INCOMPLETO + FALTA VER QUANDO SE MEXEM OS INIMIGOS
+} //INCOMPLETO + FALTA VER QUANDO SE MEXEM OS INIMIGOS
 
 void trataevalida_tecla(cmov movcli){   
-    int aux_cli;
+    int aux_cli, morto;
     for(int i=0;i<info.cli_activos;i++){
         if(strcmp(movcli.fifopid, info.clientes_activos[i].dados_cli.fifopid)==0){
             aux_cli = i;
@@ -301,29 +323,62 @@ void trataevalida_tecla(cmov movcli){
     if(movcli.tecla == 'u'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == 0)
             return;
-        updownleftrigth(0, 1, aux_cli);
+        morto=updownleftrigth(0, 1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'd'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == (LIN-1))
             return;
-        updownleftrigth(0, -1, aux_cli);
+        morto=updownleftrigth(0, -1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'l'){
         if(info.clientes_activos[aux_cli].atributos_cli.x == 0)
             return;
-        updownleftrigth(-1, 0, aux_cli);
+        morto=updownleftrigth(-1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'r'){
         if(info.clientes_activos[aux_cli].atributos_cli.x == (COL-1))
             return;
-        updownleftrigth(1, 0, aux_cli);
+        morto=updownleftrigth(1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
+    }
+    if(morto){
+        if(info.clientes_activos[aux_cli].atributos_cli.nvidas == 1){
+            //FAZER FUNCAO AVISAR DE MORTE
+        }
+        --info.clientes_activos[aux_cli].atributos_cli.nvidas;
+        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].personagem = 0;
+        re_nascimento(aux_cli);
     }
 }
 
-void* tratateclado(void* tratacmd_running){  
+void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
+    if(tecla == 'u'){
+        if(dados_inimigo->y == 0)
+            return;
+        updownleftrigth_inimigo(0, 1, dados_inimigo);
+    }
+    if(tecla == 'd'){
+        if(dados_inimigo->y == (LIN-1))
+            return;
+        updownleftrigth_inimigo(0, -1, dados_inimigo);
+    }
+    if(tecla == 'l'){
+        if(dados_inimigo->x == 0)
+            return;
+        updownleftrigth_inimigo(-1, 0, dados_inimigo);
+    }
+    if(tecla == 'r'){
+        if(dados_inimigo->x == (COL-1))
+            return;
+        updownleftrigth_inimigo(1, 0, dados_inimigo);
+    }
+}
+
+void* tratateclado(void* data_trata_cmd){  
     char* cmd;
     char linha[100], token[100];
     int openfifo, encerrar=0;
+    trata_cmd *data;
+    data = (trata_cmd*) data_trata_cmd;
     
     if(signal(SIGUSR2, thread_sigusr2) == SIG_ERR){
         perror("Erro no sinal - tratateclado\n");
@@ -339,7 +394,7 @@ void* tratateclado(void* tratacmd_running){
         cmd = strtok(token, " ");
 
         if(!strcmp(cmd, "add")){
-            adduser(info.nomefich, linha);
+            adduser(data->nomefich, linha);
             continue;
         }
         if(!strcmp(cmd, "users")){
@@ -367,7 +422,7 @@ void* tratateclado(void* tratacmd_running){
             //pthread_mutex_lock(&lock);
             info.continua=0;
             //pthread_mutex_unlock(&lock);
-            *((int*)tratacmd_running)=0;
+            *((int*)data->estado_thread)=0;
             if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
                 perror("Erro ao escrever para fifo\n");
             }
@@ -387,15 +442,39 @@ void* tratateclado(void* tratacmd_running){
     pthread_exit(NULL);
 }
 
-/*
-void* printenemyxy(void *threadarg){
+void* enemy_thread(void *threadarg){
     
     enemy *data;
     data = (enemy*) threadarg;
-    printf("\n%d", data->powerup);
+    int openfifo, aux;
+    cmov movimento;
+    
+    pause();
+    
+    while(data->vida){
+        aux = rand()%4;
+        if(aux == 0){
+            movimento.tecla = 'u';
+        }else
+            if(aux == 1)
+                movimento.tecla = 'd';
+            else
+                if(aux == 2)
+                    movimento.tecla = 'l';
+                else
+                    movimento.tecla = 'r';
+        if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
+            perror("Erro ao abrir o fifo\n");
+        }
+        movimento.fifopid[0] = data->id;
+        if(write(openfifo,&movimento,sizeof(movimento)) < 0){
+            perror("Erro ao escrever para fifo\n");
+        }
+        close(openfifo);
+        sleep(1);
+    }
     pthread_exit(NULL);
 }
-*/
 
 void thread_sigusr2(int sig){
     pthread_exit(NULL);
@@ -438,10 +517,11 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 }
 
 int main(int argc, char** argv){
-    int openfifo, tipomsg, resposta, fifocliente, tratacmd_running=1;
+    int openfifo, tipomsg, resposta, fifocliente;
     int nobject, nenemy, nmaxplay, endpid;
     char token[15];
     char* aux;
+    trata_cmd data_trata_cmd;
     clogin login;
     cmov movimento;
     servcom dados_jogo;
@@ -456,20 +536,22 @@ int main(int argc, char** argv){
         nobject=(rand()%25)+5;
     else
         nobject=atoi(getenv("NOBJECT"));
+    if(getenv("NMAXPLAY") == NULL)
+        nmaxplay=(rand()%20)+1;
+    else
+        nmaxplay=atoi(getenv("NMAXPLAY"));
     if(getenv("NENEMY") == NULL)
         nenemy=(rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
     
-/*
     pthread_t enemies[nenemy];
-    enemy enemies_data[nenemy];
-*/
-    
-    if(getenv("NMAXPLAY") == NULL)
-        nmaxplay=(rand()%20)+1;
-    else
-        nmaxplay=atoi(getenv("NMAXPLAY"));
+    enemy *inimigos_ativos;
+    int num_enemies = nenemy;
+    if((inimigos_ativos=malloc(sizeof(enemy) * (num_enemies))) == NULL){
+        perror("Erro na alocacao de memoria\n");
+        return (EXIT_FAILURE);
+    }                                                                           //FALTA FREE E MUITAS COISAS
     
     if(signal(SIGUSR1, shutdown_sigusr1) == SIG_ERR){
         perror("Erro no sinal\n");
@@ -486,25 +568,27 @@ int main(int argc, char** argv){
         perror("Erro ao abrir o fifo\n");
         return(EXIT_FAILURE);
     }
-    
-    strcpy(info.nomefich, argv[1]);                                           
+                                             
     info.clientes_activos=NULL;
+    info.cli_activos=0;
     info.continua=1;
     inicializa_mapa(nobject);
     
-    if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&tratacmd_running) != 0){
+    data_trata_cmd.estado_thread = 1;
+    strcpy(data_trata_cmd.nomefich, argv[1]); 
+    if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&data_trata_cmd) != 0){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
     
-/*
-    for(int i=0;i<nenemy;i++){
-        if(pthread_create(&enemies[i], NULL, printenemyxy, (void*)&enemies_data[i]) != 0){
+    for(int i=0;i<num_enemies;i++){
+        inimigos_ativos[i].vida = 1;
+        inimigos_ativos[i].id = i;
+        if(pthread_create(&enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
             perror("Erro ao criar a thread\n");
             return(EXIT_FAILURE);
         }
     }
-*/
     
     while(info.continua){
         if(read(openfifo,&tipomsg,sizeof(tipomsg)) < 0){
@@ -516,7 +600,7 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-            if(resposta=cliente_reconhecido(info.nomefich, login))              //APAGAR O IF ELSE
+            if(resposta=cliente_reconhecido(argv[1], login))                    //APAGAR O IF ELSE
                 printf("cliente bom\n");
             else
                 printf("cliente mau\n");
@@ -555,10 +639,15 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-            trataevalida_tecla(movimento);
+            if(movimento.fifopid[0] == '/')
+                trataevalida_tecla(movimento);
+            else
+                for(int i=0;i<num_enemies;i++)
+                    if(movimento.fifopid[0] == inimigos_ativos[i].id)
+                        trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]);
         }
     }
-    if(tratacmd_running)
+    if(data_trata_cmd.estado_thread)
         pthread_kill(thread_tratateclado, SIGUSR2);
     
     for(int i=0;i<info.cli_activos;i++){

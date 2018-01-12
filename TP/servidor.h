@@ -14,12 +14,19 @@ typedef struct clienteslogin{
     char fifopid[15];
 }clogin;
 
+typedef struct thread_trata_cmd{
+    int estado_thread;
+    char nomefich[30];
+}trata_cmd;
+
 typedef struct clientesmovimento{
-    char tecla;         // |u = UP| |d = DOWN| |l = LEFT| |r = RIGHT| |b = BOMB| |m = MEGABOMB|
+    char tecla;     // |u = UP| |d = DOWN| |l = LEFT| |r = RIGHT| |b = BOMB| |m = MEGABOMB|
     char fifopid[15];
 }cmov;
 
 typedef struct enemies{
+    int vida;       // 0 = morto   1 = vivo
+    int id;         // numero do inimigo
     int x, y;       // posicao no mapa
     int powerup;    // 0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z
 }enemy;
@@ -34,9 +41,9 @@ typedef struct jogadores{
 }jogador;
 
 typedef struct tiles{
-    int wall;       // -1 = migalha   0 = sem parede   1 = parede indestrutivel   2 = parede destrutivel
+    int wall;       // 0 = sem parede   1 = parede indestrutivel   2 = parede destrutivel   3 = migalha   4 = bomba   5 = megabomba
     int powerup;    // 0 = sem objeto   1 = objeto x    2 = objeto y    3 = objeto z ...
-    int explosao;   // 0 = sem explosao   1 = explosao (da bomba)
+    int explosao;   // 0 = sem explosao   1 = explosao central   2 = explosao horizontal   3 = explosao vertical (da bomba)
     int personagem; // -1 = um inimigo   0 = nada   1 = um jogador
 }tile;
 
@@ -55,7 +62,6 @@ typedef struct infoglobal{
     dcli* clientes_activos;
     int cli_activos;
     tile mapa[LIN][COL];
-    char nomefich[30];
     int continua;
 }infoglobal;
     
@@ -73,13 +79,15 @@ void set_struct_tocliente(servcom* data, char fpid[15]);
 
 void inicializa_mapa(int n_migalhas);
 
-void updownleftrigth(int x, int y, int n_cli);
+int updownleftrigth(int x, int y, int x_atual, int y_atual);
 
 void trataevalida_tecla(cmov movcli);
 
-void* tratateclado(void* tratacmd_running);
+void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);
 
-//void*printenemyxy(void *threadarg);
+void* tratateclado(void* data_trata_cmd);
+
+void* enemy_thread(void *threadarg);
 
 int cliente_reconhecido(char* nomefich, clogin teste);
 
