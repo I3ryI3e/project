@@ -5,6 +5,7 @@
 
 #include <QGraphicsPixmapItem>
 #include <QObject>
+using namespace std;
 
 class Player : public QObject, public QGraphicsPixmapItem {
     Q_OBJECT
