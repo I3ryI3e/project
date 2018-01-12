@@ -14,6 +14,10 @@
 #include "Player.h"
 #include "dados.h"
 #include "Leitor.h"
+#include "Migalha.h"
+#include "Enemy.h"
+#include "Bomb.h"
+#include "MegaBomb.h"
 using namespace std;
 
 class Game : public QObject{
@@ -30,6 +34,10 @@ class Game : public QObject{
     QList<Block*> blocosdestrutiveis;
     QList<Block*> blocosindestrutiveis;
     QList<Player*> jogadoresativos;
+    QList<Migalha*> migalhas;
+    QList<Enemy*> inimigos;
+    QList<Bomb*> bombas;
+    QList<MegaBomb*> mega_bombas;
     static int sigurs1fd[2];
     static int sigurs2fd[2];
 public:

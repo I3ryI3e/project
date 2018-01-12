@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <QGraphicsTextItem>
 
 
 int Game::sigurs1fd[] = {0,0};
@@ -132,9 +133,16 @@ void Game::respostalogin(int resposta){
 void Game::update(servcom novo){
     blocosdestrutiveis.clear();
     blocosindestrutiveis.clear();
+    migalhas.clear();
+    jogadoresativos.clear();
     qDeleteAll(scene->items());
     Block* novo_bloco;
     Player* novo_player;
+    Migalha* nova_migalha;
+    QGraphicsTextItem* dados;
+    Enemy* novo_inimigo;
+    Bomb* nova_bomba;
+    MegaBomb* nova_mega;
     for(int i=0;i<=N_LIN+1;i++){
         for(int j=0;j<=N_COL+1;j++){
             if(i==0 || i == (N_LIN+1)){
@@ -162,15 +170,62 @@ void Game::update(servcom novo){
                 novo_bloco->setPos(((i*20)+20),((j*20)+20));
                 blocosindestrutiveis.append(novo_bloco);
                 scene->addItem(novo_bloco);
+            }else if(novo.mapa[i][j].wall == 3){
+                nova_migalha= new Migalha();
+                nova_migalha->setPos(((i*20)+20),((j*20)+20));
+                migalhas.append(nova_migalha);
+                scene->addItem(nova_migalha);
+            }else if (novo.mapa[i][j].wall == 4){
+                nova_bomba= new Bomb();
+                nova_bomba->setPos(((i*20)+20),((j*20)+20));
+                bombas.append(nova_bomba);
+                scene->addItem(nova_bomba);
+            }else if(novo.mapa[i][j].wall == 4){
+                nova_mega= new MegaBomb();
+                nova_mega->setPos(((i*20)+20),((j*20)+20));
+                mega_bombas.append(nova_mega);
+                scene->addItem(nova_mega);
+            }else if(novo.mapa[i][j].personagem == -1){
+                novo_inimigo= new Enemy();
+                novo_inimigo->setPos(((i*20)+20),((j*20)+20));
+                inimigos.append(novo_inimigo);
+            }else if (novo.mapa[i][j].personagem == 1){
+                if(i != novo.player.x && j != novo.player.y){
+                    novo_player = new Player();
+                    novo_player->setPixmap(QPixmap("./aliado.png").scaled(20,20,Qt::KeepAspectRatio));
+                    novo_player->setPos((novo.player.x*20+20),(novo.player.y*20+20));
+                    jogadoresativos.append(novo_player);
+                }
             }
         }
     }
     novo_player = new Player();
+    novo_player->setPixmap(QPixmap("./jogador.png").scaled(20,20,Qt::KeepAspectRatio));
     novo_player->setPos((novo.player.x*20+20),(novo.player.y*20+20));
     jogadoresativos.append(novo_player);
     novo_player->setFlag(QGraphicsItem::ItemIsFocusable);
     novo_player->setFocus();
+    jogadoresativos.append(novo_player);
     scene->addItem(novo_player);
+    dados= new QGraphicsTextItem();
+    dados->setPlainText(QString("Bombas: ") + QString::number(novo.player.bomb));
+    dados->setDefaultTextColor(Qt::blue);
+    dados->setFont(QFont("times",14));
+    dados->setPos(690,0);
+    scene->addItem(dados);
+    dados= new QGraphicsTextItem();
+    dados->setPlainText(QString("Mega Bombas: ") + QString::number(novo.player.megabomb));
+    dados->setDefaultTextColor(Qt::red);
+    dados->setFont(QFont("times",14));
+    dados->setPos(690,30);
+    scene->addItem(dados);
+    dados= new QGraphicsTextItem();
+    dados->setPlainText(QString("Vidas: ") + QString::number(novo.player.nvidas));
+    dados->setDefaultTextColor(Qt::green);
+    dados->setFont(QFont("times",14));
+    dados->setPos(690,60);
+    scene->addItem(dados);
+    
 
 }
 
