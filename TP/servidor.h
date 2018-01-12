@@ -48,7 +48,7 @@ typedef struct tiles{
 }tile;
 
 typedef struct servidorcomunicacao{
-    int estado;             // 0 = jogo a decorrer   1 = acabou   2 = kick
+    int estado;             // 0 = acabou   1 = jogo a decorrer   2 = kick
     tile mapa[LIN][COL];    //campo de jogo
     jogador player;         //informacao do jogador
 }servcom;
@@ -77,13 +77,15 @@ void re_nascimento(int num_cli);
 
 void set_struct_tocliente(servcom* data, char fpid[15]);
 
-void inicializa_mapa(int n_migalhas);
+void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos);
 
-int updownleftrigth(int x, int y, int x_atual, int y_atual);
+void removecliente_ativo(int razao, int cli);
+
+int updownleftrigth(int x, int y, int x_atual, int y_atual);                    // 0 = tudo bem   1 = morreu   2 = inimigo matou jogador
 
 void trataevalida_tecla(cmov movcli);
 
-void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);
+int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);               // 0 = tudo bem   1 = morreu
 
 void* tratateclado(void* data_trata_cmd);
 

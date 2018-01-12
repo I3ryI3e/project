@@ -58,39 +58,13 @@ void adduser(char* nomefich, char* cmd){
 void kickplayer_ativo(char* cmd){  
     char* token;
     char* kickplayer;
-    dcli* aux;
-    servcom kick;
-    int fifoaux;
     
     token = strtok(cmd, " ");
     if((kickplayer = strtok(NULL, " ")) != NULL){
         for(int i=0;i<info.cli_activos;i++){
             if(strcmp(kickplayer, info.clientes_activos[i].dados_cli.username)==0){
-                if(i != (info.cli_activos-1))
-                    info.clientes_activos[i] = info.clientes_activos[info.cli_activos-1];
-                else if(info.cli_activos == 1){
-                    info.cli_activos=0;
-                    free(info.clientes_activos);
-                    info.clientes_activos=NULL;
-                    return;
-                }
-                if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
-                    perror("Erro na realocacao de memoria\n");
-                    return;
-                }else{
-                    info.clientes_activos=aux;
-                    --info.cli_activos;
-                    info.mapa[info.clientes_activos[i].atributos_cli.x][info.clientes_activos[i].atributos_cli.y].personagem = 0;
-                }
+                removecliente_ativo(2, i);
                 i = info.cli_activos;
-                if((fifoaux=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
-                    perror("Erro ao abrir o fifo cliente\n");
-                    return;
-                }
-                kick.estado = 2;
-                if(write(fifoaux,&kick,sizeof(kick)) < 0){
-                    perror("Erro ao escrever para fifo\n");
-                }
             }
         }
     }else{
@@ -210,8 +184,8 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
     }
 }
 
-void inicializa_mapa(int n_migalhas){
-    int aux, mig=2, i, j, mig_aux = n_migalhas/2;
+void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
+    int aux, mig=3, i, j, k, mig_aux = n_migalhas/2;
     
     for(i=0;i<LIN;i++){
         for(j=0;j<COL;j++){
@@ -242,12 +216,12 @@ void inicializa_mapa(int n_migalhas){
             }
         }
     }
-    mig=2;
+    mig=3;
     mig_aux = (n_migalhas/2) + (n_migalhas%2);
     for(i=LIN-1;i>=0;i--){
         for(j=COL-1;j>=0;j--){
             if(info.mapa[i][j].wall == 0){
-                if(mig==1 && mig_aux > 0){
+                if(mig == 1 && mig_aux > 0){
                     info.mapa[i][j].wall = 3;
                     --mig_aux;
                     mig = (rand()%10)+1;
@@ -257,8 +231,61 @@ void inicializa_mapa(int n_migalhas){
             }
         }
     }
+    mig=1;
+    num_inimigos = num_inimigos-1;
+    for(k=0;k<12;k++){
+        for(i=-1-k;i<2+k;i++){
+            for(j=-1-k;j<2+k;j++){
+                if(num_inimigos >= 0){
+                    if(info.mapa[LIN/2+i][COL/2+j].wall == 0 && mig == 1){
+                        inimigos[num_inimigos].x = LIN/2+i;
+                        inimigos[num_inimigos].y = COL/2+i;
+                        --num_inimigos;
+                        mig = (rand()%5)+1;
+                    }else{
+                        --mig;
+                    }
+                }else{
+                    return;
+                }
+            }
+        }
+    }
     return;
-}                             //VERFICA MIGALHAS + PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
+}                             //PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
+
+void removecliente_ativo(int razao, int cli){
+    dcli* aux;
+    servcom kick;
+    int fifoaux;
+    
+    if(cli != (info.cli_activos-1))       //SE NAO E O ULTIMO
+        info.clientes_activos[cli] = info.clientes_activos[info.cli_activos-1];   //PEGA-SE NO ULTIMO E METE-SE NO LUGAR ATUAL
+    else if(info.cli_activos == 1){     //SE SO EXISTIR UM
+        info.cli_activos=0;
+        free(info.clientes_activos);
+        info.clientes_activos=NULL;
+        return;
+    }
+    if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
+        perror("Erro na realocacao de memoria\n");
+        return;
+    }else{
+        info.clientes_activos=aux;
+        --info.cli_activos;
+        if(razao == 2)
+            info.mapa[info.clientes_activos[cli].atributos_cli.x][info.clientes_activos[cli].atributos_cli.y].personagem = 0;
+        kick.estado = razao;
+    }
+    if((fifoaux=open(info.clientes_activos[cli].dados_cli.fifopid, O_WRONLY)) < 0){
+        perror("Erro ao abrir o fifo cliente\n");
+        return;
+    }
+    if(write(fifoaux,&kick,sizeof(kick)) < 0){
+        perror("Erro ao escrever para fifo\n");
+    }
+    close(fifoaux);
+}
 
 int updownleftrigth(int x, int y, int x_atual, int y_atual){
     if(info.mapa[x_atual+x][y_atual+y].wall == 1 || info.mapa[x_atual+x][y_atual+y].wall == 2)
@@ -276,7 +303,7 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
         if(info.mapa[x_atual+x][y_atual+y].personagem == 1){
             info.mapa[x_atual][y_atual].personagem = 0;
             info.mapa[x_atual+x][y_atual+y].personagem = -1;
-            return 2;    //MOASDNOASDNAOISDNASDON
+            return 2;    //INIMIGO MATA JOGADOR
         }
         if(info.mapa[x_atual+x][y_atual+y].personagem != -1){
             info.mapa[x_atual][y_atual].personagem = 0;
@@ -297,7 +324,7 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
         }
     }
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
-} //INCOMPLETO
+}      //INCOMPLETO
 
 void trataevalida_tecla(cmov movcli){   
     int aux_cli, morto;
@@ -307,10 +334,6 @@ void trataevalida_tecla(cmov movcli){
             i = info.cli_activos;
         }
     }
-    //if(movcli.tecla == 'b')   //CRIA THREAD
-    //if(movcli.tecla == 'm')   //CRIA THREAD
-    //VERIFICA SE TEM UM INIMIGO NO SITIO ONDE ESTÁ, ANTES DE SER MEXIDO
-    //TEM QUE SER MUDADO PORQUE O UTILIZADOR PODE TAR QUIETO E OS INIMIGOS E QUE VAO AO LUGAR DELE
     if(movcli.tecla == 'u'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == 0)
             return;
@@ -333,39 +356,39 @@ void trataevalida_tecla(cmov movcli){
     }
     if(morto){
         if(info.clientes_activos[aux_cli].atributos_cli.nvidas == 1){
-            //FAZER FUNCAO AVISAR DE MORTE
+            removecliente_ativo(0, aux_cli);
+            return;
         }
         --info.clientes_activos[aux_cli].atributos_cli.nvidas;
         info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].personagem = 0;
         re_nascimento(aux_cli);
     }
+    //if(movcli.tecla == 'b')   //CRIA THREAD
+    //if(movcli.tecla == 'm')   //CRIA THREAD
 }
 
-void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
-    int morto;
+int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
     if(tecla == 'u'){
         if(dados_inimigo->y == 0)
-            return;
-        morto=updownleftrigth(0, 1, dados_inimigo->x, dados_inimigo->y);
+            return 0;
+        return updownleftrigth(0, 1, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'd'){
         if(dados_inimigo->y == (LIN-1))
-            return;
-        morto=updownleftrigth(0, -1, dados_inimigo->x, dados_inimigo->y);
+            return 0;
+        return updownleftrigth(0, -1, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'l'){
         if(dados_inimigo->x == 0)
-            return;
-        morto=updownleftrigth(-1, 0, dados_inimigo->x, dados_inimigo->y);
+            return 0;
+        return updownleftrigth(-1, 0, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'r'){
         if(dados_inimigo->x == (COL-1))
-            return;
-        morto=updownleftrigth(1, 0, dados_inimigo->x, dados_inimigo->y);
+            return 0;
+        return updownleftrigth(1, 0, dados_inimigo->x, dados_inimigo->y);
     }
-    if(morto){
-        
-    }
+    return 0;
 }
 
 void* tratateclado(void* data_trata_cmd){  
@@ -513,9 +536,7 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 
 int main(int argc, char** argv){
     int openfifo, tipomsg, resposta, fifocliente;
-    int nobject, nenemy, nmaxplay, endpid;
-    char token[15];
-    char* aux;
+    int nobject, nenemy, nmaxplay;
     trata_cmd data_trata_cmd;
     clogin login;
     cmov movimento;
@@ -546,8 +567,7 @@ int main(int argc, char** argv){
     if((inimigos_ativos=malloc(sizeof(enemy) * (num_enemies))) == NULL){
         perror("Erro na alocacao de memoria\n");
         return (EXIT_FAILURE);
-    }                                                                           //FALTA FREE E MUITAS COISAS
-    
+    } 
     if(signal(SIGUSR1, shutdown_sigusr1) == SIG_ERR){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
@@ -567,7 +587,7 @@ int main(int argc, char** argv){
     info.clientes_activos=NULL;
     info.cli_activos=0;
     info.continua=1;
-    inicializa_mapa(nobject);
+    inicializa_mapa(nobject, inimigos_ativos, num_enemies);
     
     data_trata_cmd.estado_thread = 1;
     strcpy(data_trata_cmd.nomefich, argv[1]); 
@@ -575,7 +595,6 @@ int main(int argc, char** argv){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
-    
     for(int i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida = 1;
         inimigos_ativos[i].id = i;
@@ -638,24 +657,32 @@ int main(int argc, char** argv){
                 trataevalida_tecla(movimento);
             else
                 for(int i=0;i<num_enemies;i++)
-                    if(movimento.fifopid[0] == inimigos_ativos[i].id)
-                        trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]);
+                    if(movimento.fifopid[0] == inimigos_ativos[i].id && inimigos_ativos[i].vida == 1)
+                        if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]))
+                            inimigos_ativos[i].vida = 0;
         }
     }
     if(data_trata_cmd.estado_thread)
         pthread_kill(thread_tratateclado, SIGUSR2);
     
     for(int i=0;i<info.cli_activos;i++){
-        strncpy(token, info.clientes_activos[i].dados_cli.fifopid, 14);
-        aux = strtok(token, "o");
-        aux = strtok(NULL, "\0");
-        endpid = atoi(token);
-        kill(endpid, SIGUSR1);                                                  //SIGUSR1 = 10
+        if((fifocliente=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
+            perror("Erro ao abrir o fifo cliente\n");
+        }
+        dados_jogo.estado = 0;
+        if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){
+            perror("Erro a escrever para cliente\n");
+        }
+        close(fifocliente);
     }
     close(openfifo);
     unlink("/tmp/fifoserv");
     pthread_join(thread_tratateclado, NULL);
+    for(int i=0;i<num_enemies;i++){
+        pthread_join(enemies[i], NULL);
+    }
     pthread_mutex_destroy(&lock);
+    free(inimigos_ativos);
     free(info.clientes_activos);
     return(EXIT_SUCCESS);
 }
