@@ -285,7 +285,7 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
         if(info.mapa[x_atual+x][y_atual+y].personagem == 1){
             info.mapa[x_atual][y_atual].personagem = 0;
             info.mapa[x_atual+x][y_atual+y].personagem = -1;
-            return ;    //MOASDNOASDNAOISDNASDON
+            return 2;    //MOASDNOASDNAOISDNASDON
         }
         if(info.mapa[x_atual+x][y_atual+y].personagem != -1){
             info.mapa[x_atual][y_atual].personagem = 0;
@@ -301,12 +301,12 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
             return 0;
         info.mapa[x_atual][y_atual].personagem = 0;
         info.mapa[x_atual+x][y_atual+y].personagem = 1;
-        if(info.mapa[x_atual+x][y_atual+y].wall == 3){
+        if(info.mapa[x_atual+x][y_atual+y].wall == 3){  //FALTA MIGALHAS E POWERUPS
             //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
         }
     }
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
-} //INCOMPLETO + FALTA VER QUANDO SE MEXEM OS INIMIGOS
+} //INCOMPLETO
 
 void trataevalida_tecla(cmov movcli){   
     int aux_cli, morto;
@@ -351,25 +351,29 @@ void trataevalida_tecla(cmov movcli){
 }
 
 void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
+    int morto;
     if(tecla == 'u'){
         if(dados_inimigo->y == 0)
             return;
-        updownleftrigth_inimigo(0, 1, dados_inimigo);
+        morto=updownleftrigth(0, 1, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'd'){
         if(dados_inimigo->y == (LIN-1))
             return;
-        updownleftrigth_inimigo(0, -1, dados_inimigo);
+        morto=updownleftrigth(0, -1, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'l'){
         if(dados_inimigo->x == 0)
             return;
-        updownleftrigth_inimigo(-1, 0, dados_inimigo);
+        morto=updownleftrigth(-1, 0, dados_inimigo->x, dados_inimigo->y);
     }
     if(tecla == 'r'){
         if(dados_inimigo->x == (COL-1))
             return;
-        updownleftrigth_inimigo(1, 0, dados_inimigo);
+        morto=updownleftrigth(1, 0, dados_inimigo->x, dados_inimigo->y);
+    }
+    if(morto){
+        
     }
 }
 
