@@ -238,6 +238,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
             for(j=-1-k;j<2+k;j++){
                 if(num_inimigos >= 0){
                     if(info.mapa[LIN/2+i][COL/2+j].wall == 0 && mig == 1){
+                        info.mapa[LIN/2+i][COL/2+j].personagem = -1;
                         inimigos[num_inimigos].x = LIN/2+i;
                         inimigos[num_inimigos].y = COL/2+i;
                         --num_inimigos;
@@ -252,7 +253,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
         }
     }
     return;
-}                             //PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
+}//PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
 
 void removecliente_ativo(int razao, int cli){
     dcli* aux;
@@ -319,12 +320,14 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
             return 0;
         info.mapa[x_atual][y_atual].personagem = 0;
         info.mapa[x_atual+x][y_atual+y].personagem = 1;
+        //PRECISAMOS DE METER OS ATRIBUTOS DO CLIENTE ATUALIZADOS X/Y <------------------<---------<----------
+        
         if(info.mapa[x_atual+x][y_atual+y].wall == 3){  //FALTA MIGALHAS E POWERUPS
             //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
         }
     }
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
-}      //INCOMPLETO
+}      //INCOMPLETO + TA MAL UMA CENA
 
 void trataevalida_tecla(cmov movcli){   
     int aux_cli, morto;
@@ -360,11 +363,22 @@ void trataevalida_tecla(cmov movcli){
             return;
         }
         --info.clientes_activos[aux_cli].atributos_cli.nvidas;
-        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].personagem = 0;
         re_nascimento(aux_cli);
     }
-    //if(movcli.tecla == 'b')   //CRIA THREAD
-    //if(movcli.tecla == 'm')   //CRIA THREAD
+    if(movcli.tecla == 'b'){   //CRIA THREAD
+        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 4;
+        //INICIALIZAR ESTRUTURA DA BOMBA
+        if(pthread_create(&NOME DA THREAD, NULL, bomb_mega_bomb, (void*)&STRUCT BOMB_MB) != 0){
+            perror("Erro ao criar a thread - bomba\n");
+        }   
+    }
+    if(movcli.tecla == 'm'){   //CRIA THREAD
+        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 5;
+        //INICIALIZAR ESTRUTURA DA BOMBA
+        if(pthread_create(&NOME DA THREAD, NULL, bomb_mega_bomb, (void*)&STRUCT BOMB_MB) != 0){
+            perror("Erro ao criar a thread - bomba\n");
+        }
+    }
 }
 
 int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
@@ -458,7 +472,7 @@ void* tratateclado(void* data_trata_cmd){
         }
     }
     pthread_exit(NULL);
-}
+}                         //TIRAR SINAL DAQUI
 
 void* enemy_thread(void *threadarg){
     
@@ -494,8 +508,187 @@ void* enemy_thread(void *threadarg){
     pthread_exit(NULL);
 }
 
-void thread_sigusr2(int sig){
+void* bomb_mega_bomb(void* range){
+    bomb_com *bomba = (bomb_com*) range;
+    int openfifo;
+    sleep(2);
+    if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
+        perror("Erro ao abrir o fifo\n");
+    }
+    if(write(openfifo,&bomba,sizeof(bomb_com)) < 0){
+        perror("Erro ao escrever para fifo\n");
+    }
+    sleep(2);
+    bomba->bomb_type += 1;
+    if(write(openfifo,&bomba,sizeof(bomb_com)) < 0){
+        perror("Erro ao escrever para fifo\n");
+    }
+    close(openfifo);
+    //  ACABAR AQUI CENAS <-----------------<-----------------<-----------------
     pthread_exit(NULL);
+}
+
+void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
+    int i, j, k, l, m, aux = bomba.range-2;
+    i=j=k=l=1;
+    
+    info.mapa[bomba.x][bomba.y].wall = 0;
+    info.mapa[bomba.x][bomba.y].explosao = 1;
+    while(aux>0){
+        if(i<=bomba.range && (bomba.x+i)<=LIN-1){
+            if(info.mapa[bomba.x+i][bomba.y].wall == 1){
+                i=bomba.range+1;
+            }else{
+                if(info.mapa[bomba.x+i][bomba.y].wall == 2){
+                    info.mapa[bomba.x+i][bomba.y].wall = 0;
+                    info.mapa[bomba.x+i][bomba.y].explosao = 2;
+                    i=bomba.range+1;
+                }else{
+                    info.mapa[bomba.x+i][bomba.y].explosao = 2;
+                    if(info.mapa[bomba.x+i][bomba.y].personagem == 1){
+                        if(updownleftrigth(i, 0, bomba.x, bomba.y) == 1){
+                            for(m=0;m<info.cli_activos;m++){
+                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x+i) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
+                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                        removecliente_ativo(0, m);
+                                    }else{
+                                        --info.clientes_activos[m].atributos_cli.nvidas;
+                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                        re_nascimento(m);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(info.mapa[bomba.x+i][bomba.y].personagem == -1){
+                        if(updownleftrigth(i, 0, bomba.x, bomba.y) == 1){
+                            for(m=0;m<num_inimigos;m++){
+                                if((inimigos[m]->x == (bomba.x+i)) && (inimigos[m]->y == (bomba.y)))
+                                    inimigos[m]->vida = 0;
+                            }
+                        }
+                    }
+                    ++i;
+                }
+            }
+        }
+        if(j<=bomba.range && (bomba.x-j)>=0){
+            if(info.mapa[bomba.x-j][bomba.y].wall == 1){
+                j=bomba.range+1;
+            }else{
+                if(info.mapa[bomba.x-j][bomba.y].wall == 2){
+                    info.mapa[bomba.x-j][bomba.y].wall = 0;
+                    info.mapa[bomba.x-j][bomba.y].explosao = 2;
+                    j=bomba.range+1;
+                }else{
+                    info.mapa[bomba.x-j][bomba.y].explosao = 2;
+                    if(info.mapa[bomba.x-j][bomba.y].personagem == 1){
+                        if(updownleftrigth(-j, 0, bomba.x, bomba.y) == 1){
+                            for(m=0;m<info.cli_activos;m++){
+                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x-j) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
+                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                        removecliente_ativo(0, m);
+                                    }else{
+                                        --info.clientes_activos[m].atributos_cli.nvidas;
+                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                        re_nascimento(m);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(info.mapa[bomba.x-j][bomba.y].personagem == -1){
+                        if(updownleftrigth(-j, 0, bomba.x, bomba.y) == 1){
+                            for(m=0;m<num_inimigos;m++){
+                                if((inimigos[m]->x == (bomba.x-j)) && (inimigos[m]->y == (bomba.y)))
+                                    inimigos[m]->vida = 0;
+                            }
+                        }
+                    }
+                    ++j;
+                }
+            }
+        }
+        if(k<=bomba.range && (bomba.y+k)<=COL-1){
+            if(info.mapa[bomba.x][bomba.y+k].wall == 1){
+                k=bomba.range+1;
+            }else{
+                if(info.mapa[bomba.x][bomba.y+k].wall == 2){
+                    info.mapa[bomba.x][bomba.y+k].wall = 0;
+                    info.mapa[bomba.x][bomba.y+k].explosao = 2;
+                    k=bomba.range+1;
+                }else{
+                    info.mapa[bomba.x][bomba.y+k].explosao = 2;
+                    if(info.mapa[bomba.x][bomba.y+k].personagem == 1){
+                        if(updownleftrigth(0, k, bomba.x, bomba.y) == 1){
+                            for(m=0;m<info.cli_activos;m++){
+                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y+k)){
+                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                        removecliente_ativo(0, m);
+                                    }else{
+                                        --info.clientes_activos[m].atributos_cli.nvidas;
+                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                        re_nascimento(m);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(info.mapa[bomba.x][bomba.y+k].personagem == -1){
+                        if(updownleftrigth(0, k, bomba.x, bomba.y) == 1){
+                            for(m=0;m<num_inimigos;m++){
+                                if((inimigos[m]->x == (bomba.x)) && (inimigos[m]->y == (bomba.y+k)))
+                                    inimigos[m]->vida = 0;
+                            }
+                        }
+                    }
+                    ++k;
+                }
+            }
+        }
+        if(l<=bomba.range && (bomba.y-l)>=0){
+            if(info.mapa[bomba.x][bomba.y-l].wall == 1){
+                l=bomba.range+1;
+            }else{
+                if(info.mapa[bomba.x][bomba.y-l].wall == 2){
+                    info.mapa[bomba.x][bomba.y-l].wall = 0;
+                    info.mapa[bomba.x][bomba.y-l].explosao = 2;
+                    l=bomba.range+1;
+                }else{
+                    info.mapa[bomba.x][bomba.y-l].explosao = 2;
+                    if(info.mapa[bomba.x][bomba.y-l].personagem == 1){
+                        if(updownleftrigth(0, -l, bomba.x, bomba.y) == 1){
+                            for(m=0;m<info.cli_activos;m++){
+                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y-l)){
+                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                        removecliente_ativo(0, m);
+                                    }else{
+                                        --info.clientes_activos[m].atributos_cli.nvidas;
+                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                        re_nascimento(m);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(info.mapa[bomba.x][bomba.y-l].personagem == -1){
+                        if(updownleftrigth(0, -l, bomba.x, bomba.y) == 1){
+                            for(m=0;m<num_inimigos;m++){
+                                if((inimigos[m]->x == (bomba.x)) && (inimigos[m]->y == (bomba.y-l)))
+                                    inimigos[m]->vida = 0;
+                            }
+                        }
+                    }
+                    ++l;
+                }
+            }
+        }
+        --aux;
+    }
+}
+
+void thread_sigusr2(int sig){
+    pthread_exit(NULL); 
 }
 
 void shutdown_sigusr1(int sig){  
@@ -535,9 +728,10 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 }
 
 int main(int argc, char** argv){
-    int openfifo, tipomsg, resposta, fifocliente;
+    int openfifo, tipomsg, resposta, fifocliente, i;
     int nobject, nenemy, nmaxplay;
     trata_cmd data_trata_cmd;
+    bomb_mb bomb_msg;
     clogin login;
     cmov movimento;
     servcom dados_jogo;
@@ -595,7 +789,7 @@ int main(int argc, char** argv){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
-    for(int i=0;i<num_enemies;i++){
+    for(i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida = 1;
         inimigos_ativos[i].id = i;
         if(pthread_create(&enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
@@ -605,12 +799,12 @@ int main(int argc, char** argv){
     }
     
     while(info.continua){
-        if(read(openfifo,&tipomsg,sizeof(tipomsg)) < 0){
+        if(read(openfifo,&tipomsg,sizeof(int)) < 0){
             perror("Erro na leitura do fifo\n");
             break;
         }
         if(tipomsg==1){
-            if(read(openfifo,&login,sizeof(login)) < 0){
+            if(read(openfifo,&login,sizeof(clogin)) < 0){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
@@ -624,24 +818,24 @@ int main(int argc, char** argv){
             }
             if(resposta){
                 if(addnewcliente_ativo(login, nmaxplay)){
-                    if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = 1 => LOGIN ACEITE E ADICIONADO
+                    if(write(fifocliente,&resposta,sizeof(int)) < 0){      //RESPOSTA = 1 => LOGIN ACEITE E ADICIONADO
                         perror("Erro a escrever para cliente\n");
                         break;
                     }
                     set_struct_tocliente(&dados_jogo, login.fifopid);
-                    if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
+                    if(write(fifocliente,&dados_jogo,sizeof(servcom)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
                         perror("Erro a escrever para cliente\n");
                     }
                 }else{
                     resposta=-1;
-                    if(write(fifocliente,&resposta,sizeof(resposta)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
+                    if(write(fifocliente,&resposta,sizeof(int)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
                         perror("Erro a escrever para cliente\n");
                         close(fifocliente);
                         break;
                     }
                 }
             }else{
-                if(write(fifocliente,&resposta,sizeof(resposta)) < 0){          //RESPOSTA = 0 => LOGIN REJEITADO
+                if(write(fifocliente,&resposta,sizeof(int)) < 0){          //RESPOSTA = 0 => LOGIN REJEITADO
                     perror("Erro a escrever para cliente\n");
                 }
             }
@@ -649,23 +843,48 @@ int main(int argc, char** argv){
             continue;
         }
         if(tipomsg == 2){
-            if(read(openfifo,&movimento,sizeof(movimento)) < 0){
+            if(read(openfifo,&movimento,sizeof(cmov)) < 0){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
             if(movimento.fifopid[0] == '/')
                 trataevalida_tecla(movimento);
             else
-                for(int i=0;i<num_enemies;i++)
+                for(i=0;i<num_enemies;i++)
                     if(movimento.fifopid[0] == inimigos_ativos[i].id && inimigos_ativos[i].vida == 1)
-                        if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]))
-                            inimigos_ativos[i].vida = 0;
+                        if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]) != 0)
+                            if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]) == 1)
+                                 inimigos_ativos[i].vida = 0;
+                            else
+                                for(int j=0;j<info.cli_activos;j++){
+                                    if(info.clientes_activos[j].atributos_cli.x == (inimigos_ativos[i].x) && info.clientes_activos[j].atributos_cli.y == (inimigos_ativos[i].y)){
+                                        if(info.clientes_activos[j].atributos_cli.nvidas == 1){
+                                            removecliente_ativo(0, j);
+                                        }else{
+                                            --info.clientes_activos[j].atributos_cli.nvidas;
+                                            re_nascimento(j);
+                                        }
+                                    }
+                                }
+                                
+        }
+        if(tipomsg == 3){
+            
+        }
+        if(tipomsg == 4){
+            if(read(openfifo,&bomb_msg,sizeof(bomb_mb)) < 0){
+                perror("Erro na leitura do fifo\n");
+                break;
+            }
+            explode_bomba(bomb_msg, inimigos_ativos, num_enemies);
+            //UPDATE PARA TODOS OS JOGADORES
+            continue;
         }
     }
     if(data_trata_cmd.estado_thread)
         pthread_kill(thread_tratateclado, SIGUSR2);
     
-    for(int i=0;i<info.cli_activos;i++){
+    for(i=0;i<info.cli_activos;i++){
         if((fifocliente=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
             perror("Erro ao abrir o fifo cliente\n");
         }

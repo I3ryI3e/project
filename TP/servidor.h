@@ -19,6 +19,16 @@ typedef struct thread_trata_cmd{
     char nomefich[30];
 }trata_cmd;
 
+typedef struct thread_bomb_mega_bomb{
+    int range;
+    int x, y;
+}bomb_mb;
+
+typedef struct bomba_com{
+    int bomb_type;              // 4 = explode bomba   5 = acaba bomba   6 = explode m_bomba   7 = acaba m_bomba
+    bomb_mb bomba;
+}bomb_com;
+
 typedef struct clientesmovimento{
     char tecla;     // |u = UP| |d = DOWN| |l = LEFT| |r = RIGHT| |b = BOMB| |m = MEGABOMB|
     char fifopid[15];
@@ -90,6 +100,10 @@ int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);               
 void* tratateclado(void* data_trata_cmd);
 
 void* enemy_thread(void *threadarg);
+
+void* bomb_mega_bomb(void *range);
+
+void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos);
 
 int cliente_reconhecido(char* nomefich, clogin teste);
 
