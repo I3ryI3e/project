@@ -34,6 +34,11 @@ typedef struct clientesmovimento{
     char fifopid[15];
 }cmov;
 
+typedef struct comunicacao_cmov{
+    int tipo_mensagem; // 
+    cmov dados_movimento;
+}c_cmov;
+
 typedef struct enemies{
     int vida;       // 0 = morto   1 = vivo
     int id;         // numero do inimigo
@@ -91,11 +96,11 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos);
 
 void removecliente_ativo(int razao, int cli);
 
-int updownleftrigth(int x, int y, int x_atual, int y_atual);                    // 0 = tudo bem   1 = morreu   2 = inimigo matou jogador
+int updownleftright(int x, int y, int x_atual, int y_atual);                    // 0 = tudo bem   1 = morreu   2 = inimigo matou jogador
 
 void trataevalida_tecla(cmov movcli);
 
-int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);               // 0 = tudo bem   1 = morreu
+void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo);               
 
 void* tratateclado(void* data_trata_cmd);
 

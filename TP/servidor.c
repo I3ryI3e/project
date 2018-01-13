@@ -63,6 +63,7 @@ void kickplayer_ativo(char* cmd){
     if((kickplayer = strtok(NULL, " ")) != NULL){
         for(int i=0;i<info.cli_activos;i++){
             if(strcmp(kickplayer, info.clientes_activos[i].dados_cli.username)==0){
+                info.mapa[info.clientes_activos[i].atributos_cli.x][info.clientes_activos[i].atributos_cli.y].personagem = 0;
                 removecliente_ativo(2, i);
                 i = info.cli_activos;
             }
@@ -200,7 +201,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                     info.mapa[i][j].wall = 1;
                 }else{
                     aux = (rand()%100);
-                    if(aux < 69){
+                    if(aux < 39){
                         info.mapa[i][j].wall = 2;
                     }else{
                         if(mig==1 && mig_aux > 0){
@@ -236,8 +237,8 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
     for(k=0;k<12;k++){
         for(i=-1-k;i<2+k;i++){
             for(j=-1-k;j<2+k;j++){
-                if(num_inimigos >= 0){
-                    if(info.mapa[LIN/2+i][COL/2+j].wall == 0 && mig == 1){
+                if(info.mapa[LIN/2+i][COL/2+j].wall == 0){
+                    if(num_inimigos >= 0 && mig == 1){
                         info.mapa[LIN/2+i][COL/2+j].personagem = -1;
                         inimigos[num_inimigos].x = LIN/2+i;
                         inimigos[num_inimigos].y = COL/2+i;
@@ -246,8 +247,6 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                     }else{
                         --mig;
                     }
-                }else{
-                    return;
                 }
             }
         }
@@ -259,26 +258,26 @@ void removecliente_ativo(int razao, int cli){
     dcli* aux;
     servcom kick;
     int fifoaux;
-    
-    if(cli != (info.cli_activos-1))       //SE NAO E O ULTIMO
-        info.clientes_activos[cli] = info.clientes_activos[info.cli_activos-1];   //PEGA-SE NO ULTIMO E METE-SE NO LUGAR ATUAL
-    else if(info.cli_activos == 1){     //SE SO EXISTIR UM
+    char nomefifo[15];
+    strncpy(nomefifo,info.clientes_activos[cli].dados_cli.fifopid,15);
+    if(info.cli_activos == 1){
         info.cli_activos=0;
         free(info.clientes_activos);
         info.clientes_activos=NULL;
-        return;
+    }else{ 
+        info.clientes_activos[cli] = info.clientes_activos[info.cli_activos-1];   //PEGA-SE NO ULTIMO E METE-SE NO LUGAR ATUAL
+        if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
+            perror("Erro na realocacao de memoria\n");
+            return;
+        }else{
+            info.clientes_activos=aux;
+            --info.cli_activos;
+        }
     }
-    if((aux = realloc(info.clientes_activos, (sizeof(dcli)*(info.cli_activos-1)))) == NULL){
-        perror("Erro na realocacao de memoria\n");
+    if(razao == -1)
         return;
-    }else{
-        info.clientes_activos=aux;
-        --info.cli_activos;
-        if(razao == 2)
-            info.mapa[info.clientes_activos[cli].atributos_cli.x][info.clientes_activos[cli].atributos_cli.y].personagem = 0;
-        kick.estado = razao;
-    }
-    if((fifoaux=open(info.clientes_activos[cli].dados_cli.fifopid, O_WRONLY)) < 0){
+    kick.estado = razao;
+    if((fifoaux=open(nomefifo, O_WRONLY)) < 0){
         perror("Erro ao abrir o fifo cliente\n");
         return;
     }
@@ -288,7 +287,8 @@ void removecliente_ativo(int razao, int cli){
     close(fifoaux);
 }
 
-int updownleftrigth(int x, int y, int x_atual, int y_atual){
+int updownleftright(int x, int y, int x_atual, int y_atual){
+    int i,aux;
     if(info.mapa[x_atual+x][y_atual+y].wall == 1 || info.mapa[x_atual+x][y_atual+y].wall == 2)
             return 0;
     if(info.mapa[x_atual+x][y_atual+y].explosao > 0){
@@ -320,14 +320,21 @@ int updownleftrigth(int x, int y, int x_atual, int y_atual){
             return 0;
         info.mapa[x_atual][y_atual].personagem = 0;
         info.mapa[x_atual+x][y_atual+y].personagem = 1;
-        //PRECISAMOS DE METER OS ATRIBUTOS DO CLIENTE ATUALIZADOS X/Y <------------------<---------<----------
-        
+        for(i=0;i<info.cli_activos;i++){
+            if(x_atual == info.clientes_activos[i].atributos_cli.x && y_atual == info.clientes_activos[i].atributos_cli.y){
+                info.clientes_activos[i].atributos_cli.x +=x;
+                info.clientes_activos[i].atributos_cli.y +=y;
+                aux=i;
+                i=info.cli_activos;
+            }   
+        }
         if(info.mapa[x_atual+x][y_atual+y].wall == 3){  //FALTA MIGALHAS E POWERUPS
             //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
         }
     }
+    return 0;
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
-}      //INCOMPLETO + TA MAL UMA CENA
+}      //INCOMPLETO 
 
 void trataevalida_tecla(cmov movcli){   
     int aux_cli, morto;
@@ -340,22 +347,22 @@ void trataevalida_tecla(cmov movcli){
     if(movcli.tecla == 'u'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == 0)
             return;
-        morto=updownleftrigth(0, 1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
+        morto=updownleftright(0, -1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'd'){
         if(info.clientes_activos[aux_cli].atributos_cli.y == (LIN-1))
             return;
-        morto=updownleftrigth(0, -1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
+        morto=updownleftright(0, 1, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'l'){
         if(info.clientes_activos[aux_cli].atributos_cli.x == 0)
             return;
-        morto=updownleftrigth(-1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
+        morto=updownleftright(-1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(movcli.tecla == 'r'){
         if(info.clientes_activos[aux_cli].atributos_cli.x == (COL-1))
             return;
-        morto=updownleftrigth(1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
+        morto=updownleftright(1, 0, info.clientes_activos[aux_cli].atributos_cli.x, info.clientes_activos[aux_cli].atributos_cli.y);
     }
     if(morto){
         if(info.clientes_activos[aux_cli].atributos_cli.nvidas == 1){
@@ -383,28 +390,47 @@ void trataevalida_tecla(cmov movcli){
 */
 }
 
-int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
+void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
+    int morto;
     if(tecla == 'u'){
         if(dados_inimigo->y == 0)
-            return 0;
-        return updownleftrigth(0, 1, dados_inimigo->x, dados_inimigo->y);
+            return;
+        if((morto=updownleftright(0, -1, dados_inimigo->x, dados_inimigo->y)) != 1)
+            dados_inimigo->y += -1;
     }
     if(tecla == 'd'){
         if(dados_inimigo->y == (LIN-1))
-            return 0;
-        return updownleftrigth(0, -1, dados_inimigo->x, dados_inimigo->y);
+            return; 
+        if((morto=updownleftright(0, 1, dados_inimigo->x, dados_inimigo->y)) != 1)
+            dados_inimigo->y += 1;
     }
     if(tecla == 'l'){
         if(dados_inimigo->x == 0)
-            return 0;
-        return updownleftrigth(-1, 0, dados_inimigo->x, dados_inimigo->y);
+            return;
+        if((morto=updownleftright(-1, 0, dados_inimigo->x, dados_inimigo->y))!= 1)
+            dados_inimigo->x += -1;
     }
     if(tecla == 'r'){
         if(dados_inimigo->x == (COL-1))
-            return 0;
-        return updownleftrigth(1, 0, dados_inimigo->x, dados_inimigo->y);
+            return;
+        if((morto=updownleftright(1, 0, dados_inimigo->x, dados_inimigo->y)) != 1)
+            dados_inimigo->x += 1;
     }
-    return 0;
+    if(morto==1)
+        dados_inimigo->vida=0;
+    else if(morto ==2){
+        for(int j=0;j<info.cli_activos;j++){
+            if(info.clientes_activos[j].atributos_cli.x == (dados_inimigo->x) && info.clientes_activos[j].atributos_cli.y == (dados_inimigo->y)){
+                if(info.clientes_activos[j].atributos_cli.nvidas == 1){
+                    removecliente_ativo(0, j);
+                }else{
+                    --info.clientes_activos[j].atributos_cli.nvidas;
+                    re_nascimento(j);
+                }
+            }
+        }
+    }
+    return;
 }
 
 void* tratateclado(void* data_trata_cmd){  
@@ -481,27 +507,27 @@ void* enemy_thread(void *threadarg){
     enemy *data;
     data = (enemy*) threadarg;
     int openfifo, aux;
-    cmov movimento;
-    
-    pause();
+    c_cmov movimento;
+    sleep(10);
     
     while(data->vida){
         aux = rand()%4;
         if(aux == 0){
-            movimento.tecla = 'u';
+            movimento.dados_movimento.tecla = 'u';
         }else
             if(aux == 1)
-                movimento.tecla = 'd';
+                movimento.dados_movimento.tecla = 'd';
             else
                 if(aux == 2)
-                    movimento.tecla = 'l';
+                    movimento.dados_movimento.tecla = 'l';
                 else
-                    movimento.tecla = 'r';
+                    movimento.dados_movimento.tecla = 'r';
         if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
             perror("Erro ao abrir o fifo\n");
         }
-        movimento.fifopid[0] = data->id;
-        if(write(openfifo,&movimento,sizeof(movimento)) < 0){
+        movimento.tipo_mensagem=2;
+        movimento.dados_movimento.fifopid[0] = data->id;
+        if(write(openfifo,&movimento,sizeof(c_cmov)) < 0){
             perror("Erro ao escrever para fifo\n");
         }
         close(openfifo);
@@ -548,7 +574,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x+i][bomba.y].explosao = 2;
                     if(info.mapa[bomba.x+i][bomba.y].personagem == 1){
-                        if(updownleftrigth(i, 0, bomba.x, bomba.y) == 1){
+                        if(updownleftright(i, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
                                 if(info.clientes_activos[m].atributos_cli.x == (bomba.x+i) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
                                     if(info.clientes_activos[m].atributos_cli.nvidas == 1){
@@ -563,7 +589,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         }
                     }
                     if(info.mapa[bomba.x+i][bomba.y].personagem == -1){
-                        if(updownleftrigth(i, 0, bomba.x, bomba.y) == 1){
+                        if(updownleftright(i, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
                                 if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)))
                                     inimigos[m].vida = 0;
@@ -585,7 +611,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x-j][bomba.y].explosao = 2;
                     if(info.mapa[bomba.x-j][bomba.y].personagem == 1){
-                        if(updownleftrigth(-j, 0, bomba.x, bomba.y) == 1){
+                        if(updownleftright(-j, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
                                 if(info.clientes_activos[m].atributos_cli.x == (bomba.x-j) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
                                     if(info.clientes_activos[m].atributos_cli.nvidas == 1){
@@ -600,7 +626,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         }
                     }
                     if(info.mapa[bomba.x-j][bomba.y].personagem == -1){
-                        if(updownleftrigth(-j, 0, bomba.x, bomba.y) == 1){
+                        if(updownleftright(-j, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
                                 if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y)))
                                     inimigos[m].vida = 0;
@@ -622,7 +648,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x][bomba.y+k].explosao = 2;
                     if(info.mapa[bomba.x][bomba.y+k].personagem == 1){
-                        if(updownleftrigth(0, k, bomba.x, bomba.y) == 1){
+                        if(updownleftright(0, k, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
                                 if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y+k)){
                                     if(info.clientes_activos[m].atributos_cli.nvidas == 1){
@@ -637,7 +663,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         }
                     }
                     if(info.mapa[bomba.x][bomba.y+k].personagem == -1){
-                        if(updownleftrigth(0, k, bomba.x, bomba.y) == 1){
+                        if(updownleftright(0, k, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
                                 if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k)))
                                     inimigos[m].vida = 0;
@@ -659,7 +685,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x][bomba.y-l].explosao = 2;
                     if(info.mapa[bomba.x][bomba.y-l].personagem == 1){
-                        if(updownleftrigth(0, -l, bomba.x, bomba.y) == 1){
+                        if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
                                 if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y-l)){
                                     if(info.clientes_activos[m].atributos_cli.nvidas == 1){
@@ -674,7 +700,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         }
                     }
                     if(info.mapa[bomba.x][bomba.y-l].personagem == -1){
-                        if(updownleftrigth(0, -l, bomba.x, bomba.y) == 1){
+                        if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
                                 if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l)))
                                     inimigos[m].vida = 0;
@@ -744,8 +770,8 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 }
 
 int main(int argc, char** argv){
-    int openfifo, tipomsg, resposta, fifocliente, i;
-    int nobject, nenemy, nmaxplay;
+    int openfifo, tipomsg, resposta, fifocliente,i;
+    int nobject, nenemy, nmaxplay,start_enemies=0;
     trata_cmd data_trata_cmd;
     bomb_mb bomb_msg;
     clogin login;
@@ -767,7 +793,7 @@ int main(int argc, char** argv){
     else
         nmaxplay=atoi(getenv("NMAXPLAY"));
     if(getenv("NENEMY") == NULL)
-        nenemy=(rand()%5)+1;
+        nenemy= 1;//(rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
     
@@ -843,6 +869,7 @@ int main(int argc, char** argv){
                     if(write(fifocliente,&dados_jogo,sizeof(servcom)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
                         perror("Erro a escrever para cliente\n");
                     }
+                    
                 }else{
                     resposta=-1;
                     if(write(fifocliente,&resposta,sizeof(int)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
@@ -869,24 +896,20 @@ int main(int argc, char** argv){
             else
                 for(i=0;i<num_enemies;i++)
                     if(movimento.fifopid[0] == inimigos_ativos[i].id && inimigos_ativos[i].vida == 1)
-                        if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]) != 0)
-                            if(trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]) == 1)
-                                 inimigos_ativos[i].vida = 0;
-                            else
-                                for(int j=0;j<info.cli_activos;j++){
-                                    if(info.clientes_activos[j].atributos_cli.x == (inimigos_ativos[i].x) && info.clientes_activos[j].atributos_cli.y == (inimigos_ativos[i].y)){
-                                        if(info.clientes_activos[j].atributos_cli.nvidas == 1){
-                                            removecliente_ativo(0, j);
-                                        }else{
-                                            --info.clientes_activos[j].atributos_cli.nvidas;
-                                            re_nascimento(j);
-                                        }
-                                    }
-                                }
+                        trataevalida_tecla_inimigo(movimento.tecla, &inimigos_ativos[i]);        
             fazupdate(); 
             continue;
         }
         if(tipomsg == 3){
+            if(read(openfifo,&movimento,sizeof(cmov))< 0){
+                perror("Erro na leitura do fifo\n");
+                break;
+            }
+            for(i=0;i<info.cli_activos;i++){
+                if(strcmp(info.clientes_activos[i].dados_cli.fifopid,movimento.fifopid) == 0){
+                    removecliente_ativo(-1,i);
+                }
+            }
             
         }
         if(tipomsg == 4){
@@ -912,12 +935,15 @@ int main(int argc, char** argv){
         }
         close(fifocliente);
     }
-    close(openfifo);
-    unlink("/tmp/fifoserv");
     pthread_join(thread_tratateclado, NULL);
-    for(int i=0;i<num_enemies;i++){
+    for(i=0;i<num_enemies;i++){
+        inimigos_ativos[i].vida=0;
+    }
+    for(i =0; i< num_enemies;i++){
         pthread_join(enemies[i], NULL);
     }
+    close(openfifo);
+    unlink("/tmp/fifoserv");
     pthread_mutex_destroy(&lock);
     free(inimigos_ativos);
     free(info.clientes_activos);
