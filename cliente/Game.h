@@ -18,6 +18,8 @@
 #include "Enemy.h"
 #include "Bomb.h"
 #include "MegaBomb.h"
+#include "Kick.h"
+#include "Acabou.h"
 using namespace std;
 
 class Game : public QObject{
@@ -27,6 +29,8 @@ class Game : public QObject{
     Login* login;
     QGraphicsScene *scene;
     QGraphicsView  *view;
+    Acabou* janela_acabou;
+    Kick* janela_kick;
     Leitor *leitor;
     QThread leitorthread;
     QSocketNotifier *snUsr1;
@@ -40,6 +44,7 @@ class Game : public QObject{
     QList<MegaBomb*> mega_bombas;
     static int sigurs1fd[2];
     static int sigurs2fd[2];
+    int estado;                                                                 // ADICIONAR Estado do jogo e comparar no quit()!
 public:
     Game(string fifo, int fd);
     ~Game();
@@ -55,6 +60,7 @@ public slots:
     void usr1handler(int fd);
     void usr2handler(int fd);
     void acaboulogin();
+    void quit();
     void respostalogin(int resposta);
     void update(servcom novo);
     
