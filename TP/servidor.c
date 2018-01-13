@@ -365,6 +365,7 @@ void trataevalida_tecla(cmov movcli){
         --info.clientes_activos[aux_cli].atributos_cli.nvidas;
         re_nascimento(aux_cli);
     }
+/*
     if(movcli.tecla == 'b'){   //CRIA THREAD
         info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 4;
         //INICIALIZAR ESTRUTURA DA BOMBA
@@ -379,6 +380,7 @@ void trataevalida_tecla(cmov movcli){
             perror("Erro ao criar a thread - bomba\n");
         }
     }
+*/
 }
 
 int trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
@@ -563,8 +565,8 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x+i][bomba.y].personagem == -1){
                         if(updownleftrigth(i, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m]->x == (bomba.x+i)) && (inimigos[m]->y == (bomba.y)))
-                                    inimigos[m]->vida = 0;
+                                if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)))
+                                    inimigos[m].vida = 0;
                             }
                         }
                     }
@@ -600,8 +602,8 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x-j][bomba.y].personagem == -1){
                         if(updownleftrigth(-j, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m]->x == (bomba.x-j)) && (inimigos[m]->y == (bomba.y)))
-                                    inimigos[m]->vida = 0;
+                                if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y)))
+                                    inimigos[m].vida = 0;
                             }
                         }
                     }
@@ -637,8 +639,8 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x][bomba.y+k].personagem == -1){
                         if(updownleftrigth(0, k, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m]->x == (bomba.x)) && (inimigos[m]->y == (bomba.y+k)))
-                                    inimigos[m]->vida = 0;
+                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k)))
+                                    inimigos[m].vida = 0;
                             }
                         }
                     }
@@ -674,8 +676,8 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x][bomba.y-l].personagem == -1){
                         if(updownleftrigth(0, -l, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m]->x == (bomba.x)) && (inimigos[m]->y == (bomba.y-l)))
-                                    inimigos[m]->vida = 0;
+                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l)))
+                                    inimigos[m].vida = 0;
                             }
                         }
                     }
@@ -684,6 +686,20 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
             }
         }
         --aux;
+    }
+}
+
+void fazupdate(){
+    int fd;
+    servcom comunicacao;
+    for(int i=0;i<info.cli_activos;i++){
+        comunicacao.estado=1;
+        set_struct_tocliente(&comunicacao,info.clientes_activos[i].dados_cli.fifopid);
+        if((fd=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) <0)
+            perror("Erro ao abrir fifo\n");
+        if(write(fd,&comunicacao,sizeof(servcom)) < 0)
+            perror("Erro a escrever no fifo\n");
+        close(fd);
     }
 }
 
@@ -822,6 +838,7 @@ int main(int argc, char** argv){
                         perror("Erro a escrever para cliente\n");
                         break;
                     }
+                    dados_jogo.estado=1;
                     set_struct_tocliente(&dados_jogo, login.fifopid);
                     if(write(fifocliente,&dados_jogo,sizeof(servcom)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
                         perror("Erro a escrever para cliente\n");
@@ -866,7 +883,8 @@ int main(int argc, char** argv){
                                         }
                                     }
                                 }
-                                
+            fazupdate(); 
+            continue;
         }
         if(tipomsg == 3){
             
@@ -877,7 +895,7 @@ int main(int argc, char** argv){
                 break;
             }
             explode_bomba(bomb_msg, inimigos_ativos, num_enemies);
-            //UPDATE PARA TODOS OS JOGADORES
+            fazupdate();
             continue;
         }
     }
