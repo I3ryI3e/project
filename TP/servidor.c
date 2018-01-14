@@ -116,6 +116,7 @@ void set_atributos_newcli(){
 }
 
 void re_nascimento(int num_cli){
+    srand(time(NULL));
     int aux = rand()%4;
     if(aux == 0){
         if(info.mapa[0][0].personagem == 0){
@@ -156,8 +157,6 @@ void re_nascimento(int num_cli){
                 info.clientes_activos[num_cli].atributos_cli.x=i;
                 info.clientes_activos[num_cli].atributos_cli.y=j;
                 info.mapa[i][j].personagem = 1;
-                i = LIN;
-                j = COL;
                 return;
             }
         }
@@ -311,8 +310,8 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
         if(info.mapa[x_atual+x][y_atual+y].personagem != -1){
             info.mapa[x_atual][y_atual].personagem = 0;
             info.mapa[x_atual+x][y_atual+y].personagem = -1;
+            return 3;
         }
-        return 3;
     }else{
         if(info.mapa[x_atual+x][y_atual+y].personagem == -1){
             info.mapa[x_atual][y_atual].personagem = 0;
@@ -330,10 +329,18 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
                 i=info.cli_activos;
             }   
         }
-        if(info.mapa[x_atual+x][y_atual+y].wall == 3){  //FALTA MIGALHAS E POWERUPS
+        if(info.mapa[x_atual+x][y_atual+y].wall == 3){  
+            info.mapa[x_atual+x][y_atual+y].wall=0;
+            info.clientes_activos[aux].atributos_cli.pontuacao++;   
+            }
+        if(info.mapa[x_atual+x][y_atual+y].powerup > 0){
+            info.clientes_activos[aux].atributos_cli.items += info.mapa[x_atual+x][y_atual+y].powerup;
+            info.mapa[x_atual+x][y_atual+y].powerup=0;
+        }
+            
+            //FALTA MIGALHAS E POWERUPS
             //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
         }
-    }
     return 0;
     //ACABAR FALTA AS MIGALHAS OS POWERUPS
 }      //INCOMPLETO 
@@ -398,42 +405,49 @@ void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
     if(tecla == 'u'){
         if(dados_inimigo->y == 0)
             return;
-        if((morto=updownleftright(0, -1, dados_inimigo->x, dados_inimigo->y)) > 1)
+        morto = updownleftright(0, -1, dados_inimigo->x, dados_inimigo->y);
+        if(morto > 1)
             dados_inimigo->y += -1;
     }
     if(tecla == 'd'){
         if(dados_inimigo->y == (LIN-1))
             return; 
-        if((morto=updownleftright(0, 1, dados_inimigo->x, dados_inimigo->y)) > 1)
+        morto = updownleftright(0, 1, dados_inimigo->x, dados_inimigo->y);
+        if(morto > 1)
             dados_inimigo->y += 1;
     }
     if(tecla == 'l'){
         if(dados_inimigo->x == 0)
             return;
-        if((morto=updownleftright(-1, 0, dados_inimigo->x, dados_inimigo->y)) > 1)
+        morto = updownleftright(-1, 0, dados_inimigo->x, dados_inimigo->y);
+        if(morto > 1)
             dados_inimigo->x += -1;
     }
     if(tecla == 'r'){
         if(dados_inimigo->x == (COL-1))
             return;
-        if((morto=updownleftright(1, 0, dados_inimigo->x, dados_inimigo->y)) > 1)
+        morto = updownleftright(1, 0, dados_inimigo->x, dados_inimigo->y);
+        if(morto > 1)
             dados_inimigo->x += 1;
     }
-    if(morto==1)
-        dados_inimigo->vida=0;
-    else if(morto ==2){
-        for(int j=0;j<info.cli_activos;j++){
-            if(info.clientes_activos[j].atributos_cli.x == (dados_inimigo->x) && info.clientes_activos[j].atributos_cli.y == (dados_inimigo->y)){
-                if(info.clientes_activos[j].atributos_cli.nvidas == 1){
-                    removecliente_ativo(0, j);
-                }else{
-                    --info.clientes_activos[j].atributos_cli.nvidas;
-                    re_nascimento(j);
+    switch(morto){
+        case 1: 
+            dados_inimigo->vida=0;
+            return;
+        case 2:
+            for(int j=0;j<info.cli_activos;j++){
+                if(info.clientes_activos[j].atributos_cli.x == (dados_inimigo->x) && info.clientes_activos[j].atributos_cli.y == (dados_inimigo->y)){
+                    if(info.clientes_activos[j].atributos_cli.nvidas == 1){
+                        removecliente_ativo(0, j);
+                    }else{
+                        --info.clientes_activos[j].atributos_cli.nvidas;
+                        re_nascimento(j);
+                    }
                 }
             }
-        }
+        default:
+            return;
     }
-    return;
 }
 
 void* tratateclado(void* data_trata_cmd){  
@@ -499,7 +513,7 @@ void* tratateclado(void* data_trata_cmd){
         }
     }
     pthread_exit(NULL);
-}                         //TIRAR SINAL DAQUI
+}                          // FAZER "GAME" informação do jogo                    
 
 void* enemy_thread(void *threadarg){
     
@@ -796,7 +810,7 @@ int main(int argc, char** argv){
     else
         nmaxplay=atoi(getenv("NMAXPLAY"));
     if(getenv("NENEMY") == NULL)
-        nenemy= (rand()%5)+1;
+        nenemy= 6; //(rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
     
@@ -920,6 +934,7 @@ int main(int argc, char** argv){
             }
             for(i=0;i<info.cli_activos;i++){
                 if(strcmp(info.clientes_activos[i].dados_cli.fifopid,movimento.fifopid) == 0){
+                    info.mapa[info.clientes_activos[i].atributos_cli.x][info.clientes_activos[i].atributos_cli.y].personagem=0;
                     removecliente_ativo(-1,i);
                 }
             }
