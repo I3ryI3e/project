@@ -115,6 +115,8 @@ void* bomb_mega_bomb(void *range);
 
 void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos);
 
+void limpa_bomba(bomb_mb bomba);
+
 void fazupdate();
 
 int cliente_reconhecido(char* nomefich, clogin teste);

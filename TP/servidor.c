@@ -88,8 +88,6 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             return 1;
         }
     }
-    //if(nmaxplay == 1)
-    //    return 0;
     if((info.cli_activos+1) == nmaxplay || nmaxplay == 1){
         return 0;
     }else{
@@ -453,7 +451,7 @@ void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
 void* tratateclado(void* data_trata_cmd){  
     char* cmd;
     char linha[100], token[100];
-    int openfifo, encerrar=0;
+    int openfifo, i, encerrar=0;
     trata_cmd *data;
     data = (trata_cmd*) data_trata_cmd;
     
@@ -475,8 +473,8 @@ void* tratateclado(void* data_trata_cmd){
                 printf("Nao existem jogadores ativos\n");
             else
                 printf("Jogadores ativos:\n");
-            for(int i=0;i<info.cli_activos;i++){
-                printf("%d: %s\n", i, info.clientes_activos[i].dados_cli.username);
+            for(i=0;i<info.cli_activos;i++){
+                printf("%d: %s\n", i+1, info.clientes_activos[i].dados_cli.username);
             }
             continue;
         }
@@ -485,7 +483,10 @@ void* tratateclado(void* data_trata_cmd){
             continue;
         }
         if(!strcmp(cmd, "game")){
-            printf("Mostra informacao sobre o jogo\n");
+            printf("Informacao sobre o jogo:\nMigalhas por apanhar: %d\n", ole ola ole lala);
+            for(i=0;i<info.cli_activos;i++){
+                printf("Jogador %d (%d,%d)\n\tPontuacao: %d", i+1, info.clientes_activos[i].atributos_cli.x, info.clientes_activos[i].atributos_cli.y, info.clientes_activos[i].atributos_cli.items);
+            }
             continue;
         }
         if(!strcmp(cmd, "shutdown")){
@@ -513,7 +514,7 @@ void* tratateclado(void* data_trata_cmd){
         }
     }
     pthread_exit(NULL);
-}                          // FAZER "GAME" informação do jogo                    
+}                  
 
 void* enemy_thread(void *threadarg){
     
@@ -728,6 +729,17 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
     }
 }
 
+void limpa_bomba(bomb_mb bomba){
+    int i;
+    
+    for(i=-bomba->range;i<bomba->range;i++)
+        if(info.mapa[bomba->x+i][bomba->y].explosao > 0)
+            info.mapa[bomba->x+i][bomba->y].explosao = 0;
+    for(i=-bomba->range;i<bomba->range;i++)
+        if(info.mapa[bomba->x][bomba->y+i].explosao > 0)
+            info.mapa[bomba->x][bomba->y+i].explosao = 0;
+}
+
 void fazupdate(){
     int fd;
     servcom comunicacao;
@@ -788,7 +800,7 @@ int cliente_reconhecido(char* nomefich, clogin teste){
 }
 
 int main(int argc, char** argv){
-    int openfifo, tipomsg, resposta, fifocliente,i;
+    int openfifo, tipomsg, resposta, fifocliente, i;
     int nobject, nenemy, nmaxplay,start_enemies=0;
     trata_cmd data_trata_cmd;
     bomb_mb bomb_msg;
