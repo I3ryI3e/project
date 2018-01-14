@@ -11,7 +11,8 @@
 
 infoglobal info;
 pthread_t threads;
-gl_enemies_t enemies_t;
+enemyglobal enemies_t;
+bombglobal bombas;
 pthread_mutex_t lock;
 
 void adduser(char* nomefich, char* cmd){  
@@ -288,7 +289,7 @@ void removecliente_ativo(int razao, int cli){
 
 int updownleftright(int x, int y, int x_atual, int y_atual){
     int i,aux;
-    if(info.mapa[x_atual+x][y_atual+y].wall == 1 || info.mapa[x_atual+x][y_atual+y].wall == 2)
+    if(info.mapa[x_atual+x][y_atual+y].wall == 1 || info.mapa[x_atual+x][y_atual+y].wall == 2 || info.mapa[x_atual+x][y_atual+y].wall == 4 || info.mapa[x_atual+x][y_atual+y].wall == 5)
             return 0;
     if(info.mapa[x_atual+x][y_atual+y].explosao > 0){
         if(info.mapa[x_atual][y_atual].personagem == -1){
@@ -379,22 +380,20 @@ void trataevalida_tecla(cmov movcli){
         --info.clientes_activos[aux_cli].atributos_cli.nvidas;
         re_nascimento(aux_cli);
     }
-/*
     if(movcli.tecla == 'b'){   //CRIA THREAD
         info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 4;
-        //INICIALIZAR ESTRUTURA DA BOMBA
-        if(pthread_create(&NOME DA THREAD, NULL, bomb_mega_bomb, (void*)&STRUCT BOMB_MB) != 0){
-            perror("Erro ao criar a thread - bomba\n");
-        }   
+        if(info.clientes_activos[aux_cli].atributos_cli.bomb > 0){
+            info.clientes_activos[aux_cli].atributos_cli.bomb--;
+            inicializa_bomba(info.clientes_activos[aux_cli].atributos_cli.x,info.clientes_activos[aux_cli].atributos_cli.y,2); 
+        } 
     }
     if(movcli.tecla == 'm'){   //CRIA THREAD
         info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 5;
-        //INICIALIZAR ESTRUTURA DA BOMBA
-        if(pthread_create(&NOME DA THREAD, NULL, bomb_mega_bomb, (void*)&STRUCT BOMB_MB) != 0){
-            perror("Erro ao criar a thread - bomba\n");
+        if(info.clientes_activos[aux_cli].atributos_cli.megabomb > 0){
+            info.clientes_activos[aux_cli].atributos_cli.megabomb--;
+            inicializa_bomba(info.clientes_activos[aux_cli].atributos_cli.x,info.clientes_activos[aux_cli].atributos_cli.y,4);
         }
     }
-*/
     return;
 }
 
@@ -451,7 +450,7 @@ void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
 void* tratateclado(void* data_trata_cmd){  
     char* cmd;
     char linha[100], token[100];
-    int openfifo, i, encerrar=0;
+    int openfifo, i,j,n_migalhas, encerrar=0;
     trata_cmd *data;
     data = (trata_cmd*) data_trata_cmd;
     
@@ -483,10 +482,17 @@ void* tratateclado(void* data_trata_cmd){
             continue;
         }
         if(!strcmp(cmd, "game")){
-            printf("Informacao sobre o jogo:\nMigalhas por apanhar: %d\n", ole ola ole lala);
-            for(i=0;i<info.cli_activos;i++){
-                printf("Jogador %d (%d,%d)\n\tPontuacao: %d", i+1, info.clientes_activos[i].atributos_cli.x, info.clientes_activos[i].atributos_cli.y, info.clientes_activos[i].atributos_cli.items);
+            for(i=0;i<LIN;i++){
+                for(j=0;j<COL;j++){
+                    if(info.mapa[i][j].wall == 3)
+                        n_migalhas++;
+                }
             }
+            printf("Informacao sobre o jogo:\nMigalhas por apanhar: %d\n", n_migalhas);
+            for(i=0;i<info.cli_activos;i++){
+                printf("Jogador %d (%d,%d)\n\tPontuacao: %d\n", i+1, info.clientes_activos[i].atributos_cli.x, info.clientes_activos[i].atributos_cli.y, info.clientes_activos[i].atributos_cli.items);
+            }
+            n_migalhas=0;
             continue;
         }
         if(!strcmp(cmd, "shutdown")){
@@ -551,27 +557,55 @@ void* enemy_thread(void *threadarg){
 }
 
 void* bomb_mega_bomb(void* range){
-    bomb_com *bomba = (bomb_com*) range;
+    bomb_mb *bomba = (bomb_mb*) range;
+    bomb_com aux;
     int openfifo;
     sleep(2);
+    aux.bomb_type=4;
+    aux.bomba.range=bomba->range;
+    aux.bomba.x=bomba->x;
+    aux.bomba.y=bomba->y;
     if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
         perror("Erro ao abrir o fifo\n");
     }
-    if(write(openfifo,&bomba,sizeof(bomb_com)) < 0){
+    if(write(openfifo,&aux,sizeof(bomb_com)) < 0){
         perror("Erro ao escrever para fifo\n");
     }
     sleep(2);
-    bomba->bomb_type += 1;
-    if(write(openfifo,&bomba,sizeof(bomb_com)) < 0){
+    aux.bomb_type += 1;
+    if(write(openfifo,&aux,sizeof(bomb_com)) < 0){
         perror("Erro ao escrever para fifo\n");
     }
     close(openfifo);
-    //  ACABAR AQUI CENAS <-----------------<-----------------<-----------------
     pthread_exit(NULL);
 }
 
+void inicializa_bomba(int x, int y, int range){
+    t_bomb* aux;
+    if(bombas.num_bombas == 0){
+        if((bombas.info_bombas=malloc(sizeof(t_bomb))) == NULL){
+            perror("Erro na alocacao de memoria.\n");
+            return;
+        }
+    }else{
+        if((aux= realloc(bombas.info_bombas,(bombas.num_bombas+1))) == NULL){
+            perror("Erro na realocacao de memoria.\n");
+            return;
+        }else
+            bombas.info_bombas=aux;
+    }
+    bombas.info_bombas[bombas.num_bombas].bomba.x= x;
+    bombas.info_bombas[bombas.num_bombas].bomba.y= y;
+    bombas.info_bombas[bombas.num_bombas].bomba.range= range;
+    if((pthread_create(&bombas.info_bombas[bombas.num_bombas].id,NULL,bomb_mega_bomb,(void*)&bombas.info_bombas[bombas.num_bombas].bomba)) != 0){
+        perror("Erro na criacao de thread bomba.\n");
+        return;
+    }
+    bombas.num_bombas++;
+}
+
 void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
-    int i, j, k, l, m, aux = bomba.range-2;
+    int i, j, k, l, m, aux = bomba.range;
     i=j=k=l=1;
     
     info.mapa[bomba.x][bomba.y].wall = 0;
@@ -605,8 +639,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x+i][bomba.y].personagem == -1){
                         if(updownleftright(i, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)))
+                                if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)) && inimigos[m].vida == 1){
                                     inimigos[m].vida = 0;
+                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
+                                }
                             }
                         }
                     }
@@ -642,8 +678,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x-j][bomba.y].personagem == -1){
                         if(updownleftright(-j, 0, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y)))
+                                if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y))&& inimigos[m].vida == 1){
                                     inimigos[m].vida = 0;
+                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
+                                }
                             }
                         }
                     }
@@ -657,10 +695,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
             }else{
                 if(info.mapa[bomba.x][bomba.y+k].wall == 2){
                     info.mapa[bomba.x][bomba.y+k].wall = 0;
-                    info.mapa[bomba.x][bomba.y+k].explosao = 2;
+                    info.mapa[bomba.x][bomba.y+k].explosao = 3;
                     k=bomba.range+1;
                 }else{
-                    info.mapa[bomba.x][bomba.y+k].explosao = 2;
+                    info.mapa[bomba.x][bomba.y+k].explosao = 3;
                     if(info.mapa[bomba.x][bomba.y+k].personagem == 1){
                         if(updownleftright(0, k, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
@@ -679,8 +717,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x][bomba.y+k].personagem == -1){
                         if(updownleftright(0, k, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k)))
+                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k))&& inimigos[m].vida == 1){
                                     inimigos[m].vida = 0;
+                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
+                                }
                             }
                         }
                     }
@@ -694,10 +734,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
             }else{
                 if(info.mapa[bomba.x][bomba.y-l].wall == 2){
                     info.mapa[bomba.x][bomba.y-l].wall = 0;
-                    info.mapa[bomba.x][bomba.y-l].explosao = 2;
+                    info.mapa[bomba.x][bomba.y-l].explosao = 3;
                     l=bomba.range+1;
                 }else{
-                    info.mapa[bomba.x][bomba.y-l].explosao = 2;
+                    info.mapa[bomba.x][bomba.y-l].explosao = 3;
                     if(info.mapa[bomba.x][bomba.y-l].personagem == 1){
                         if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
                             for(m=0;m<info.cli_activos;m++){
@@ -716,8 +756,10 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                     if(info.mapa[bomba.x][bomba.y-l].personagem == -1){
                         if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
                             for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l)))
+                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l))&& inimigos[m].vida == 1){
                                     inimigos[m].vida = 0;
+                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
+                                }
                             }
                         }
                     }
@@ -731,13 +773,33 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
 
 void limpa_bomba(bomb_mb bomba){
     int i;
+    t_bomb* aux;
     
-    for(i=-bomba->range;i<bomba->range;i++)
-        if(info.mapa[bomba->x+i][bomba->y].explosao > 0)
-            info.mapa[bomba->x+i][bomba->y].explosao = 0;
-    for(i=-bomba->range;i<bomba->range;i++)
-        if(info.mapa[bomba->x][bomba->y+i].explosao > 0)
-            info.mapa[bomba->x][bomba->y+i].explosao = 0;
+    pthread_join(bombas.info_bombas[0].id,NULL);
+    for(i=-bomba.range;i<=bomba.range;i++)
+        if(info.mapa[bomba.x+i][bomba.y].explosao > 0)
+            info.mapa[bomba.x+i][bomba.y].explosao = 0;
+    for(i=-bomba.range;i<=bomba.range;i++)
+        if(info.mapa[bomba.x][bomba.y+i].explosao > 0)
+            info.mapa[bomba.x][bomba.y+i].explosao = 0;
+    if(bombas.num_bombas == 1){
+        free(bombas.info_bombas);
+        bombas.info_bombas=NULL;
+        bombas.num_bombas=0;
+        return;
+    }
+    for(i=0;i<bombas.num_bombas-1;i++){
+        bombas.info_bombas[i].id=bombas.info_bombas[i+1].id;
+        bombas.info_bombas[i].bomba.range=bombas.info_bombas[i+1].bomba.range;
+        bombas.info_bombas[i].bomba.x=bombas.info_bombas[i+1].bomba.x;
+        bombas.info_bombas[i].bomba.y=bombas.info_bombas[i+1].bomba.y;
+    }
+    if((aux=realloc(bombas.info_bombas,(sizeof(t_bomb) * (bombas.num_bombas-1)))) == NULL){
+        perror("Erro na realocacao de memoria no limpa bombas.\n");
+        return;
+    }
+    bombas.info_bombas=aux;
+    bombas.num_bombas--;
 }
 
 void fazupdate(){
@@ -822,7 +884,7 @@ int main(int argc, char** argv){
     else
         nmaxplay=atoi(getenv("NMAXPLAY"));
     if(getenv("NENEMY") == NULL)
-        nenemy= 6; //(rand()%5)+1;
+        nenemy= (rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
     
@@ -857,6 +919,9 @@ int main(int argc, char** argv){
     info.cli_activos=0;
     info.continua=1;
     inicializa_mapa(nobject, inimigos_ativos, num_enemies);
+    
+    bombas.num_bombas=0;
+    bombas.info_bombas=NULL;
     
     data_trata_cmd.estado_thread = 1;
     strcpy(data_trata_cmd.nomefich, argv[1]); 
@@ -961,6 +1026,15 @@ int main(int argc, char** argv){
             fazupdate();
             continue;
         }
+        if(tipomsg == 5){
+            if(read(openfifo,&bomb_msg,sizeof(bomb_mb)) < 0){
+                perror("Erro na leitura do fifo\n");
+                break;
+            }
+            limpa_bomba(bomb_msg);
+            fazupdate();
+            continue;
+        }
     }
     if(data_trata_cmd.estado_thread)
         pthread_kill(threads, SIGUSR1);
@@ -976,15 +1050,16 @@ int main(int argc, char** argv){
         close(fifocliente);
     }
     pthread_join(threads, NULL);
-    for(i=0;i<num_enemies;i++){
+    for(i=0;i<num_enemies;i++)
         inimigos_ativos[i].vida=0;
-    }
-    for(i =0; i< num_enemies;i++){
+    for(i=0;i<bombas.num_bombas;i++)
+        pthread_join(bombas.info_bombas[i].id,NULL);
+    for(i =0; i< num_enemies;i++)
         pthread_join(enemies_t.id_thread_enemies[i], NULL);
-    }
     close(openfifo);
     unlink("/tmp/fifoserv");
     pthread_mutex_destroy(&lock);
+    free(bombas.info_bombas);
     free(enemies_t.id_thread_enemies);
     free(inimigos_ativos);
     free(info.clientes_activos);

@@ -19,15 +19,20 @@ typedef struct thread_trata_cmd{
     char nomefich[30];
 }trata_cmd;
 
-typedef struct thread_bomb_mega_bomb{
+typedef struct bomb_mega_bomb{
     int range;
     int x, y;
 }bomb_mb;
 
 typedef struct bomba_com{
-    int bomb_type;              // 4 = explode bomba   5 = acaba bomba   6 = explode m_bomba   7 = acaba m_bomba
+    int bomb_type;              // 4 = explode bomba/Mbomba   5 = acaba bomba/Mbomba
     bomb_mb bomba;
 }bomb_com;
+
+typedef struct thread_bombas{
+    bomb_mb bomba;
+    pthread_t id;
+}t_bomb;
 
 typedef struct clientesmovimento{
     char tecla;     // |u = UP| |d = DOWN| |l = LEFT| |r = RIGHT| |b = BOMB| |m = MEGABOMB|
@@ -80,10 +85,15 @@ typedef struct infoglobal{
     int continua;
 }infoglobal;
 
-typedef struct enemysglobal{
+typedef struct enemyglobal{
     pthread_t* id_thread_enemies;
     int num_threads_enemies;
-}gl_enemies_t;
+}enemyglobal;
+
+typedef struct bombglobal{
+    t_bomb* info_bombas;
+    int num_bombas;
+}bombglobal;
     
 void adduser(char* nomefich, char* cmd);
 
@@ -112,6 +122,8 @@ void* tratateclado(void* data_trata_cmd);
 void* enemy_thread(void *threadarg);
 
 void* bomb_mega_bomb(void *range);
+
+void inicializa_bomba(int x, int y, int range);
 
 void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos);
 

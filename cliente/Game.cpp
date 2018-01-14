@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <QGraphicsTextItem>
+#include "Explosion.h"
 
 
 
@@ -163,6 +164,7 @@ void Game::update(servcom novo){
         Enemy* novo_inimigo;
         Bomb* nova_bomba;
         MegaBomb* nova_mega;
+        Explosion* nova_explosao;
         for(int i=0;i<=N_LIN+1;i++){
             for(int j=0;j<=N_COL+1;j++){
                 if(i==0 || i == (N_LIN+1)){
@@ -190,17 +192,12 @@ void Game::update(servcom novo){
                     novo_bloco->setPos(((i*20)+20),((j*20)+20));
                     blocosindestrutiveis.append(novo_bloco);
                     scene->addItem(novo_bloco);
-                }else if(novo.mapa[i][j].wall == 3){
-                    nova_migalha= new Migalha();
-                    nova_migalha->setPos(((i*20)+20),((j*20)+20));
-                    migalhas.append(nova_migalha);
-                    scene->addItem(nova_migalha);
                 }else if (novo.mapa[i][j].wall == 4){
                     nova_bomba= new Bomb();
                     nova_bomba->setPos(((i*20)+20),((j*20)+20));
                     bombas.append(nova_bomba);
                     scene->addItem(nova_bomba);
-                }else if(novo.mapa[i][j].wall == 4){
+                }else if(novo.mapa[i][j].wall == 5){
                     nova_mega= new MegaBomb();
                     nova_mega->setPos(((i*20)+20),((j*20)+20));
                     mega_bombas.append(nova_mega);
@@ -211,12 +208,30 @@ void Game::update(servcom novo){
                     inimigos.append(novo_inimigo);
                     scene->addItem(novo_inimigo);
                 }else if (novo.mapa[i][j].personagem == 1){
-                    if(i != novo.player.x && j != novo.player.y){
+                    if(i != novo.player.x || j != novo.player.y){
                         novo_player = new Player();
                         novo_player->setPixmap(QPixmap("./aliado.png").scaled(20,20,Qt::KeepAspectRatio));
-                        novo_player->setPos((novo.player.x*20+20),(novo.player.y*20+20));
+                        novo_player->setPos(((i*20)+20),((j*20)+20));
+                        scene->addItem(novo_player);
                         jogadoresativos.append(novo_player);
                     }
+                }else if(novo.mapa[i][j].explosao == 1){
+                    nova_explosao= new Explosion(0);
+                    nova_explosao->setPos(((i*20)+20),((j*20)+20));
+                    scene->addItem(nova_explosao);
+                }else if(novo.mapa[i][j].explosao == 2){
+                    nova_explosao= new Explosion(1);
+                    nova_explosao->setPos(((i*20)+20),((j*20)+20));
+                    scene->addItem(nova_explosao);
+                }else if(novo.mapa[i][j].explosao == 3){
+                    nova_explosao= new Explosion(2);
+                    nova_explosao->setPos(((i*20)+20),((j*20)+20));
+                    scene->addItem(nova_explosao);
+                }else if(novo.mapa[i][j].wall == 3){
+                    nova_migalha= new Migalha();
+                    nova_migalha->setPos(((i*20)+20),((j*20)+20));
+                    migalhas.append(nova_migalha);
+                    scene->addItem(nova_migalha);
                 }
             }
         }
@@ -226,7 +241,6 @@ void Game::update(servcom novo){
         jogadoresativos.append(novo_player);
         novo_player->setFlag(QGraphicsItem::ItemIsFocusable);
         novo_player->setFocus();
-        jogadoresativos.append(novo_player);
         scene->addItem(novo_player);
         dados= new QGraphicsTextItem();
         dados->setPlainText(QString("Bombas: ") + QString::number(novo.player.bomb));
@@ -245,6 +259,12 @@ void Game::update(servcom novo){
         dados->setDefaultTextColor(Qt::green);
         dados->setFont(QFont("times",14));
         dados->setPos(690,60);
+        scene->addItem(dados);
+        dados= new QGraphicsTextItem();
+        dados->setPlainText(QString("Score: ") + QString::number(novo.player.pontuacao));
+        dados->setDefaultTextColor(Qt::black);
+        dados->setFont(QFont("times",14));
+        dados->setPos(690,90);
         scene->addItem(dados);
     }else if(novo.estado == 2){
             view->hide();

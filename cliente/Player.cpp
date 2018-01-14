@@ -1,4 +1,4 @@
-//
+
 
 #include "Player.h"
 #include "dados.h"
@@ -12,8 +12,7 @@
 
 
 
-Player::Player(){
-    
+Player::Player(): QGraphicsPixmapItem(){
 }
 
 void Player::keyPressEvent(QKeyEvent* event){
@@ -31,23 +30,15 @@ void Player::keyPressEvent(QKeyEvent* event){
     
     if( event->key() == Qt::Key_Left || event->key() == Qt::Key_A){
         comunicacao.dados_movimento.tecla='l';
-//        if(pos().x() > 20 )
-//            setPos(x()-20,y());
     }else if( event->key() == Qt::Key_Right || event->key() == Qt::Key_D){
         comunicacao.dados_movimento.tecla='r';
-//        if(pos().x() + 20 < 640)
-//            setPos(x()+20,y());
     }else if( event->key() == Qt::Key_Down || event->key() == Qt::Key_S){
         comunicacao.dados_movimento.tecla='d';
-//        if(pos().y() + 20 < 640)
-//            setPos(x(),y()+20);
     }else if( event->key() == Qt::Key_Up || event->key() == Qt::Key_W){
         comunicacao.dados_movimento.tecla='u';
-//        if(pos().y() > 20 )
-//            setPos(x(),y()-20);
     }else if( event->key() == Qt::Key_Period || event->key() == Qt::Key_1) {
         comunicacao.dados_movimento.tecla='b';
-    }else if ( event ->key() == Qt::Key_Colon || event->key() == Qt::Key_Backslash){
+    }else if ( event ->key() == Qt::Key_Comma || event->key() == Qt::Key_Backslash){
         comunicacao.dados_movimento.tecla='m';
     }
     
