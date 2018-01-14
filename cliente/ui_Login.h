@@ -18,6 +18,7 @@
 #include <QtGui/QLabel>
 #include <QtGui/QLineEdit>
 #include <QtGui/QPushButton>
+#include <QtGui/QTextEdit>
 
 QT_BEGIN_NAMESPACE
 
@@ -31,12 +32,14 @@ public:
     QLineEdit *usernametext;
     QLineEdit *passwordtext;
     QPushButton *submitbutton;
+    QTextEdit *errortext;
 
     void setupUi(QDialog *Login)
     {
         if (Login->objectName().isEmpty())
             Login->setObjectName(QString::fromUtf8("Login"));
         Login->resize(800, 400);
+        Login->setAutoFillBackground(true);
         welcome = new QLabel(Login);
         welcome->setObjectName(QString::fromUtf8("welcome"));
         welcome->setGeometry(QRect(310, 30, 180, 30));
@@ -67,9 +70,18 @@ public:
         submitbutton = new QPushButton(Login);
         submitbutton->setObjectName(QString::fromUtf8("submitbutton"));
         submitbutton->setGeometry(QRect(229, 240, 111, 41));
+        errortext = new QTextEdit(Login);
+        errortext->setObjectName(QString::fromUtf8("errortext"));
+        errortext->setGeometry(QRect(400, 130, 341, 61));
+        errortext->setAutoFillBackground(true);
+        errortext->setStyleSheet(QString::fromUtf8("background-color: rgb(204, 204, 204);"));
+        errortext->setFrameShape(QFrame::NoFrame);
+        errortext->setReadOnly(true);
+        errortext->setTextInteractionFlags(Qt::NoTextInteraction);
 
         retranslateUi(Login);
         QObject::connect(passwordtext, SIGNAL(textChanged(QString)), submitbutton, SLOT(show()));
+        QObject::connect(submitbutton, SIGNAL(clicked()), errortext, SLOT(hide()));
 
         QMetaObject::connectSlotsByName(Login);
     } // setupUi
@@ -82,6 +94,11 @@ public:
         usernamelabel->setText(QApplication::translate("Login", "Username:", 0, QApplication::UnicodeUTF8));
         passwordlabel->setText(QApplication::translate("Login", "Password:", 0, QApplication::UnicodeUTF8));
         submitbutton->setText(QApplication::translate("Login", "Submit", 0, QApplication::UnicodeUTF8));
+        errortext->setHtml(QApplication::translate("Login", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:14pt; font-weight:600; color:#da2808;\">Error! Username/Password combination not accepted</span></p></body></html>", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

@@ -6,9 +6,9 @@ extern "C" {
 #endif
 
 #define N_COL 31
-#define N_LIN 21
-#define BLOCK_WIDTH 50
-#define BLOCK_HEIGHT 50
+#define N_LIN 31
+#define BLOCK_SIZE 20
+
 
 typedef struct clienteslogin{
     char username[30];
@@ -27,7 +27,7 @@ typedef struct clientesmovimento{
 }cmov;
 
 typedef struct comunicacao_cmov{
-    int tipo_mensagem;
+    int tipo_mensagem; // 
     cmov dados_movimento;
 }c_cmov;
 
@@ -53,6 +53,7 @@ typedef struct tiles{
 }tile;
 
 typedef struct servidorcomunicacao{
+    int estado;
     tile mapa[N_LIN][N_COL];  //campo de jogo
     jogador player;     //informacao do jogador
 }servcom;
