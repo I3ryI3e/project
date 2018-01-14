@@ -79,6 +79,11 @@ typedef struct infoglobal{
     tile mapa[LIN][COL];
     int continua;
 }infoglobal;
+
+typedef struct enemysglobal{
+    pthread_t* id_thread_enemies;
+    int num_threads_enemies;
+}gl_enemies_t;
     
 void adduser(char* nomefich, char* cmd);
 

@@ -10,6 +10,8 @@
 #include "servidor.h"
 
 infoglobal info;
+pthread_t threads;
+gl_enemies_t enemies_t;
 pthread_mutex_t lock;
 
 void adduser(char* nomefich, char* cmd){  
@@ -201,7 +203,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                     info.mapa[i][j].wall = 1;
                 }else{
                     aux = (rand()%100);
-                    if(aux < 39){
+                    if(aux < 9){
                         info.mapa[i][j].wall = 2;
                     }else{
                         if(mig==1 && mig_aux > 0){
@@ -241,9 +243,9 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                     if(num_inimigos >= 0 && mig == 1){
                         info.mapa[LIN/2+i][COL/2+j].personagem = -1;
                         inimigos[num_inimigos].x = LIN/2+i;
-                        inimigos[num_inimigos].y = COL/2+i;
+                        inimigos[num_inimigos].y = COL/2+j;
                         --num_inimigos;
-                        mig = (rand()%5)+1;
+                        mig = (rand()%10)+1;
                     }else{
                         --mig;
                     }
@@ -310,7 +312,7 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
             info.mapa[x_atual][y_atual].personagem = 0;
             info.mapa[x_atual+x][y_atual+y].personagem = -1;
         }
-        return 0;
+        return 3;
     }else{
         if(info.mapa[x_atual+x][y_atual+y].personagem == -1){
             info.mapa[x_atual][y_atual].personagem = 0;
@@ -337,7 +339,7 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
 }      //INCOMPLETO 
 
 void trataevalida_tecla(cmov movcli){   
-    int aux_cli, morto;
+    int aux_cli, morto=0;
     for(int i=0;i<info.cli_activos;i++){
         if(strcmp(movcli.fifopid, info.clientes_activos[i].dados_cli.fifopid)==0){
             aux_cli = i;
@@ -388,32 +390,33 @@ void trataevalida_tecla(cmov movcli){
         }
     }
 */
+    return;
 }
 
 void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
-    int morto;
+    int morto=0;
     if(tecla == 'u'){
         if(dados_inimigo->y == 0)
             return;
-        if((morto=updownleftright(0, -1, dados_inimigo->x, dados_inimigo->y)) != 1)
+        if((morto=updownleftright(0, -1, dados_inimigo->x, dados_inimigo->y)) > 1)
             dados_inimigo->y += -1;
     }
     if(tecla == 'd'){
         if(dados_inimigo->y == (LIN-1))
             return; 
-        if((morto=updownleftright(0, 1, dados_inimigo->x, dados_inimigo->y)) != 1)
+        if((morto=updownleftright(0, 1, dados_inimigo->x, dados_inimigo->y)) > 1)
             dados_inimigo->y += 1;
     }
     if(tecla == 'l'){
         if(dados_inimigo->x == 0)
             return;
-        if((morto=updownleftright(-1, 0, dados_inimigo->x, dados_inimigo->y))!= 1)
+        if((morto=updownleftright(-1, 0, dados_inimigo->x, dados_inimigo->y)) > 1)
             dados_inimigo->x += -1;
     }
     if(tecla == 'r'){
         if(dados_inimigo->x == (COL-1))
             return;
-        if((morto=updownleftright(1, 0, dados_inimigo->x, dados_inimigo->y)) != 1)
+        if((morto=updownleftright(1, 0, dados_inimigo->x, dados_inimigo->y)) > 1)
             dados_inimigo->x += 1;
     }
     if(morto==1)
@@ -439,10 +442,6 @@ void* tratateclado(void* data_trata_cmd){
     int openfifo, encerrar=0;
     trata_cmd *data;
     data = (trata_cmd*) data_trata_cmd;
-    
-    if(signal(SIGUSR2, thread_sigusr2) == SIG_ERR){
-        perror("Erro no sinal - tratateclado\n");
-    }
     
     printf("Linha de comandos do servidor\n");
     
@@ -508,8 +507,8 @@ void* enemy_thread(void *threadarg){
     data = (enemy*) threadarg;
     int openfifo, aux;
     c_cmov movimento;
-    sleep(10);
-    
+    srand(time(NULL));
+    pause();
     while(data->vida){
         aux = rand()%4;
         if(aux == 0){
@@ -531,7 +530,7 @@ void* enemy_thread(void *threadarg){
             perror("Erro ao escrever para fifo\n");
         }
         close(openfifo);
-        sleep(1);
+        usleep(500000);
     }
     pthread_exit(NULL);
 }
@@ -730,17 +729,22 @@ void fazupdate(){
 }
 
 void thread_sigusr2(int sig){
-    pthread_exit(NULL); 
+    for(int i=0;i<enemies_t.num_threads_enemies;i++){
+        if(pthread_self() == enemies_t.id_thread_enemies[i])
+            return;
+    }
+    return;
 }
 
 void shutdown_sigusr1(int sig){  
+    if(pthread_self() == threads)
+        pthread_exit(NULL);
+    
     int openfifo, encerrar=0;
     if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
             perror("Erro ao abrir o fifo\n");
         }
-        pthread_mutex_lock(&lock);
         info.continua=0;
-        pthread_mutex_unlock(&lock);
         if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
             perror("Erro ao escrever para fifo\n");
         }
@@ -777,7 +781,6 @@ int main(int argc, char** argv){
     clogin login;
     cmov movimento;
     servcom dados_jogo;
-    pthread_t thread_tratateclado;
     srand((unsigned) time(NULL));
     
     if(argc != 2){
@@ -793,11 +796,11 @@ int main(int argc, char** argv){
     else
         nmaxplay=atoi(getenv("NMAXPLAY"));
     if(getenv("NENEMY") == NULL)
-        nenemy= 1;//(rand()%5)+1;
+        nenemy= (rand()%5)+1;
     else
         nenemy=atoi(getenv("NENEMY"));
     
-    pthread_t enemies[nenemy];
+    
     enemy *inimigos_ativos;
     int num_enemies = nenemy;
     if((inimigos_ativos=malloc(sizeof(enemy) * (num_enemies))) == NULL){
@@ -805,6 +808,10 @@ int main(int argc, char** argv){
         return (EXIT_FAILURE);
     } 
     if(signal(SIGUSR1, shutdown_sigusr1) == SIG_ERR){
+        perror("Erro no sinal\n");
+        return(EXIT_FAILURE);
+    }
+     if(signal(SIGUSR2, thread_sigusr2) == SIG_ERR){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
     }
@@ -827,14 +834,19 @@ int main(int argc, char** argv){
     
     data_trata_cmd.estado_thread = 1;
     strcpy(data_trata_cmd.nomefich, argv[1]); 
-    if(pthread_create(&thread_tratateclado, NULL, tratateclado, (void*)&data_trata_cmd) != 0){
+    if(pthread_create(&threads, NULL, tratateclado, (void*)&data_trata_cmd) != 0){
         perror("Erro ao criar a thread\n");
         return(EXIT_FAILURE);
     }
+    if((enemies_t.id_thread_enemies=((pthread_t*)malloc(num_enemies*sizeof(pthread_t)))) == NULL){
+        perror("Erro na alocacao de memoria\n");
+        return (EXIT_FAILURE);
+    }
+    enemies_t.num_threads_enemies=num_enemies;
     for(i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida = 1;
         inimigos_ativos[i].id = i;
-        if(pthread_create(&enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
+        if(pthread_create(&enemies_t.id_thread_enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
             perror("Erro ao criar a thread\n");
             return(EXIT_FAILURE);
         }
@@ -850,11 +862,7 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
-            if(resposta=cliente_reconhecido(argv[1], login))                    //APAGAR O IF ELSE
-                printf("cliente bom\n");
-            else
-                printf("cliente mau\n");
-   
+            resposta=cliente_reconhecido(argv[1], login);
             if((fifocliente=open(login.fifopid, O_WRONLY)) < 0){
                 perror("Erro ao abrir o fifo cliente\n");
             }
@@ -869,7 +877,12 @@ int main(int argc, char** argv){
                     if(write(fifocliente,&dados_jogo,sizeof(servcom)) < 0){  //ENVIO DA ESTRUTURA DE DADOS PARA O CLIENTE
                         perror("Erro a escrever para cliente\n");
                     }
-                    
+                    if(start_enemies == 0){
+                        start_enemies=1;
+                        for(i=0;i<enemies_t.num_threads_enemies;i++){
+                            pthread_kill(enemies_t.id_thread_enemies[i],SIGUSR2);
+                        }
+                    }
                 }else{
                     resposta=-1;
                     if(write(fifocliente,&resposta,sizeof(int)) < 0){      //RESPOSTA = -1 => LOGIN ACEITE MAS NAO FOI ADICIONADO
@@ -923,7 +936,7 @@ int main(int argc, char** argv){
         }
     }
     if(data_trata_cmd.estado_thread)
-        pthread_kill(thread_tratateclado, SIGUSR2);
+        pthread_kill(threads, SIGUSR1);
     
     for(i=0;i<info.cli_activos;i++){
         if((fifocliente=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
@@ -935,16 +948,17 @@ int main(int argc, char** argv){
         }
         close(fifocliente);
     }
-    pthread_join(thread_tratateclado, NULL);
+    pthread_join(threads, NULL);
     for(i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida=0;
     }
     for(i =0; i< num_enemies;i++){
-        pthread_join(enemies[i], NULL);
+        pthread_join(enemies_t.id_thread_enemies[i], NULL);
     }
     close(openfifo);
     unlink("/tmp/fifoserv");
     pthread_mutex_destroy(&lock);
+    free(enemies_t.id_thread_enemies);
     free(inimigos_ativos);
     free(info.clientes_activos);
     return(EXIT_SUCCESS);
