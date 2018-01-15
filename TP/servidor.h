@@ -131,6 +131,10 @@ void limpa_bomba(bomb_mb bomba);
 
 void fazupdate();
 
+int contador_migalhas_jogadores();
+
+void final_jogo(int razao);
+
 int cliente_reconhecido(char* nomefich, clogin teste);
 
 void thread_sigusr2(int sig);

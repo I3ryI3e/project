@@ -13,7 +13,8 @@ infoglobal info;
 pthread_t threads;
 enemyglobal enemies_t;
 bombglobal bombas;
-pthread_mutex_t lock;
+//thread_mutex_t lock;
+pthread_rwlock_t lock;
 
 void adduser(char* nomefich, char* cmd){  
     FILE *f;
@@ -110,7 +111,6 @@ void set_atributos_newcli(){
     info.clientes_activos[info.cli_activos].atributos_cli.megabomb=2;
     info.clientes_activos[info.cli_activos].atributos_cli.nvidas=3;
     info.clientes_activos[info.cli_activos].atributos_cli.pontuacao=0;
-    info.clientes_activos[info.cli_activos].atributos_cli.items=0;
     re_nascimento(info.cli_activos);
 }
 
@@ -171,7 +171,6 @@ void set_struct_tocliente(servcom* data, char fpid[15]){
             data->player.megabomb = info.clientes_activos[i].atributos_cli.megabomb;
             data->player.nvidas = info.clientes_activos[i].atributos_cli.nvidas;
             data->player.pontuacao = info.clientes_activos[i].atributos_cli.pontuacao;
-            data->player.items = info.clientes_activos[i].atributos_cli.items;
             i=info.cli_activos;
         }
     }
@@ -333,8 +332,8 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
             info.clientes_activos[aux].atributos_cli.pontuacao++;   
             }
         if(info.mapa[x_atual+x][y_atual+y].powerup > 0){
-            info.clientes_activos[aux].atributos_cli.items += info.mapa[x_atual+x][y_atual+y].powerup;
-            info.mapa[x_atual+x][y_atual+y].powerup=0;
+           // info.clientes_activos[aux].atributos_cli. += info.mapa[x_atual+x][y_atual+y].powerup; ////wtfff
+            //info.mapa[x_atual+x][y_atual+y].powerup=0;
         }
             
             //FALTA MIGALHAS E POWERUPS
@@ -381,17 +380,22 @@ void trataevalida_tecla(cmov movcli){
         re_nascimento(aux_cli);
     }
     if(movcli.tecla == 'b'){   //CRIA THREAD
-        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 4;
         if(info.clientes_activos[aux_cli].atributos_cli.bomb > 0){
+            info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 4;
             info.clientes_activos[aux_cli].atributos_cli.bomb--;
+            pthread_rwlock_rdlock(&lock);
             inicializa_bomba(info.clientes_activos[aux_cli].atributos_cli.x,info.clientes_activos[aux_cli].atributos_cli.y,2); 
-        } 
+            pthread_rwlock_unlock(&lock);
+        }
+        return;
     }
     if(movcli.tecla == 'm'){   //CRIA THREAD
-        info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 5;
         if(info.clientes_activos[aux_cli].atributos_cli.megabomb > 0){
+            info.mapa[info.clientes_activos[aux_cli].atributos_cli.x][info.clientes_activos[aux_cli].atributos_cli.y].wall = 5;
             info.clientes_activos[aux_cli].atributos_cli.megabomb--;
+            pthread_rwlock_rdlock(&lock);
             inicializa_bomba(info.clientes_activos[aux_cli].atributos_cli.x,info.clientes_activos[aux_cli].atributos_cli.y,4);
+            pthread_rwlock_unlock(&lock);
         }
     }
     return;
@@ -490,7 +494,7 @@ void* tratateclado(void* data_trata_cmd){
             }
             printf("Informacao sobre o jogo:\nMigalhas por apanhar: %d\n", n_migalhas);
             for(i=0;i<info.cli_activos;i++){
-                printf("Jogador %d (%d,%d)\n\tPontuacao: %d\n", i+1, info.clientes_activos[i].atributos_cli.x, info.clientes_activos[i].atributos_cli.y, info.clientes_activos[i].atributos_cli.items);
+                printf("Jogador %d (%d,%d)\n\tPontuacao: %d\n", i+1, info.clientes_activos[i].atributos_cli.x, info.clientes_activos[i].atributos_cli.y, info.clientes_activos[i].atributos_cli.pontuacao);
             }
             n_migalhas=0;
             continue;
@@ -562,9 +566,11 @@ void* bomb_mega_bomb(void* range){
     int openfifo;
     sleep(2);
     aux.bomb_type=4;
+    pthread_rwlock_rdlock(&lock);
     aux.bomba.range=bomba->range;
     aux.bomba.x=bomba->x;
     aux.bomba.y=bomba->y;
+    pthread_rwlock_unlock(&lock);
     if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
         perror("Erro ao abrir o fifo\n");
     }
@@ -588,7 +594,7 @@ void inicializa_bomba(int x, int y, int range){
             return;
         }
     }else{
-        if((aux= realloc(bombas.info_bombas,(bombas.num_bombas+1))) == NULL){
+        if((aux= realloc(bombas.info_bombas,(sizeof(t_bomb)*(bombas.num_bombas+1)))) == NULL){
             perror("Erro na realocacao de memoria.\n");
             return;
         }else
@@ -622,27 +628,23 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x+i][bomba.y].explosao = 2;
                     if(info.mapa[bomba.x+i][bomba.y].personagem == 1){
-                        if(updownleftright(i, 0, bomba.x, bomba.y) == 1){
-                            for(m=0;m<info.cli_activos;m++){
-                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x+i) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
-                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
-                                        removecliente_ativo(0, m);
-                                    }else{
-                                        --info.clientes_activos[m].atributos_cli.nvidas;
-                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
-                                        re_nascimento(m);
-                                    }
+                        for(m=0;m<info.cli_activos;m++){
+                            if(info.clientes_activos[m].atributos_cli.x == (bomba.x+i) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
+                                if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                    removecliente_ativo(0, m);
+                                }else{
+                                    --info.clientes_activos[m].atributos_cli.nvidas;
+                                    info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                    re_nascimento(m);
                                 }
                             }
                         }
                     }
                     if(info.mapa[bomba.x+i][bomba.y].personagem == -1){
-                        if(updownleftright(i, 0, bomba.x, bomba.y) == 1){
-                            for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)) && inimigos[m].vida == 1){
-                                    inimigos[m].vida = 0;
-                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
-                                }
+                        for(m=0;m<num_inimigos;m++){
+                            if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)) && inimigos[m].vida == 1){
+                                inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
                     }
@@ -661,27 +663,23 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x-j][bomba.y].explosao = 2;
                     if(info.mapa[bomba.x-j][bomba.y].personagem == 1){
-                        if(updownleftright(-j, 0, bomba.x, bomba.y) == 1){
-                            for(m=0;m<info.cli_activos;m++){
-                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x-j) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
-                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
-                                        removecliente_ativo(0, m);
-                                    }else{
-                                        --info.clientes_activos[m].atributos_cli.nvidas;
-                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
-                                        re_nascimento(m);
-                                    }
+                        for(m=0;m<info.cli_activos;m++){
+                            if(info.clientes_activos[m].atributos_cli.x == (bomba.x-j) && info.clientes_activos[m].atributos_cli.y == (bomba.y)){
+                                if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                    removecliente_ativo(0, m);
+                                }else{
+                                    --info.clientes_activos[m].atributos_cli.nvidas;
+                                    info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                    re_nascimento(m);
                                 }
                             }
                         }
                     }
                     if(info.mapa[bomba.x-j][bomba.y].personagem == -1){
-                        if(updownleftright(-j, 0, bomba.x, bomba.y) == 1){
-                            for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y))&& inimigos[m].vida == 1){
-                                    inimigos[m].vida = 0;
-                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
-                                }
+                        for(m=0;m<num_inimigos;m++){
+                            if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y))&& inimigos[m].vida == 1){
+                                inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
                     }
@@ -700,27 +698,23 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x][bomba.y+k].explosao = 3;
                     if(info.mapa[bomba.x][bomba.y+k].personagem == 1){
-                        if(updownleftright(0, k, bomba.x, bomba.y) == 1){
-                            for(m=0;m<info.cli_activos;m++){
-                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y+k)){
-                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
-                                        removecliente_ativo(0, m);
-                                    }else{
-                                        --info.clientes_activos[m].atributos_cli.nvidas;
-                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
-                                        re_nascimento(m);
-                                    }
+                        for(m=0;m<info.cli_activos;m++){
+                            if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y+k)){
+                                if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                    removecliente_ativo(0, m);
+                                }else{
+                                    --info.clientes_activos[m].atributos_cli.nvidas;
+                                    info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                    re_nascimento(m);
                                 }
                             }
                         }
                     }
                     if(info.mapa[bomba.x][bomba.y+k].personagem == -1){
-                        if(updownleftright(0, k, bomba.x, bomba.y) == 1){
-                            for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k))&& inimigos[m].vida == 1){
-                                    inimigos[m].vida = 0;
-                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
-                                }
+                        for(m=0;m<num_inimigos;m++){
+                            if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k))&& inimigos[m].vida == 1){
+                                inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
                     }
@@ -739,27 +733,23 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                 }else{
                     info.mapa[bomba.x][bomba.y-l].explosao = 3;
                     if(info.mapa[bomba.x][bomba.y-l].personagem == 1){
-                        if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
-                            for(m=0;m<info.cli_activos;m++){
-                                if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y-l)){
-                                    if(info.clientes_activos[m].atributos_cli.nvidas == 1){
-                                        removecliente_ativo(0, m);
-                                    }else{
-                                        --info.clientes_activos[m].atributos_cli.nvidas;
-                                        info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
-                                        re_nascimento(m);
-                                    }
+                        for(m=0;m<info.cli_activos;m++){
+                            if(info.clientes_activos[m].atributos_cli.x == (bomba.x) && info.clientes_activos[m].atributos_cli.y == (bomba.y-l)){
+                                if(info.clientes_activos[m].atributos_cli.nvidas == 1){
+                                    removecliente_ativo(0, m);
+                                }else{
+                                    --info.clientes_activos[m].atributos_cli.nvidas;
+                                    info.mapa[info.clientes_activos[m].atributos_cli.x][info.clientes_activos[m].atributos_cli.y].personagem = 0;
+                                    re_nascimento(m);
                                 }
                             }
                         }
                     }
                     if(info.mapa[bomba.x][bomba.y-l].personagem == -1){
-                        if(updownleftright(0, -l, bomba.x, bomba.y) == 1){
-                            for(m=0;m<num_inimigos;m++){
-                                if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l))&& inimigos[m].vida == 1){
-                                    inimigos[m].vida = 0;
-                                    info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
-                                }
+                        for(m=0;m<num_inimigos;m++){
+                            if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l))&& inimigos[m].vida == 1){
+                                inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
                     }
@@ -777,11 +767,13 @@ void limpa_bomba(bomb_mb bomba){
     
     pthread_join(bombas.info_bombas[0].id,NULL);
     for(i=-bomba.range;i<=bomba.range;i++)
-        if(info.mapa[bomba.x+i][bomba.y].explosao > 0)
-            info.mapa[bomba.x+i][bomba.y].explosao = 0;
+        if(bomba.x+i >=0 && bomba.x+i<COL)
+            if(info.mapa[bomba.x+i][bomba.y].explosao > 0)
+                info.mapa[bomba.x+i][bomba.y].explosao = 0;
     for(i=-bomba.range;i<=bomba.range;i++)
-        if(info.mapa[bomba.x][bomba.y+i].explosao > 0)
-            info.mapa[bomba.x][bomba.y+i].explosao = 0;
+        if(bomba.y+i >=0 && bomba.y+i<LIN)
+            if(info.mapa[bomba.x][bomba.y+i].explosao > 0)
+                info.mapa[bomba.x][bomba.y+i].explosao = 0;
     if(bombas.num_bombas == 1){
         free(bombas.info_bombas);
         bombas.info_bombas=NULL;
@@ -813,6 +805,29 @@ void fazupdate(){
         if(write(fd,&comunicacao,sizeof(servcom)) < 0)
             perror("Erro a escrever no fifo\n");
         close(fd);
+    }
+}
+
+int contador_migalhas_jogadores(){
+    int i,contador=0;
+    for(i=0;i<info.cli_activos;i++){
+        contador += info.clientes_activos[i].atributos_cli.pontuacao;
+    }
+    return contador;
+}
+
+void final_jogo(int razao){
+    int i,fifocliente;
+    servcom dados_jogo;
+    for(i=0;i<info.cli_activos;i++){
+        if((fifocliente=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
+            perror("Erro ao abrir o fifo cliente\n");
+        }
+        dados_jogo.estado = razao;
+        if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){
+            perror("Erro a escrever para cliente\n");
+        }
+        close(fifocliente);
     }
 }
 
@@ -903,7 +918,7 @@ int main(int argc, char** argv){
         perror("Erro no sinal\n");
         return(EXIT_FAILURE);
     }
-    if (pthread_mutex_init(&lock, NULL) != 0){
+    if (pthread_rwlock_init(&lock, NULL) != 0){
         printf("Inicilizacao do mutex falhou\n");
         return (EXIT_FAILURE);
     }
@@ -946,6 +961,10 @@ int main(int argc, char** argv){
     while(info.continua){
         if(read(openfifo,&tipomsg,sizeof(int)) < 0){
             perror("Erro na leitura do fifo\n");
+            break;
+        }
+        if(contador_migalhas_jogadores() == nobject){
+            final_jogo(5);
             break;
         }
         if(tipomsg==1){
@@ -1022,7 +1041,9 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
+            pthread_rwlock_wrlock(&lock);
             explode_bomba(bomb_msg, inimigos_ativos, num_enemies);
+            pthread_rwlock_unlock(&lock);
             fazupdate();
             continue;
         }
@@ -1031,34 +1052,29 @@ int main(int argc, char** argv){
                 perror("Erro na leitura do fifo\n");
                 break;
             }
+            pthread_rwlock_wrlock(&lock);
             limpa_bomba(bomb_msg);
+            pthread_rwlock_unlock(&lock);
             fazupdate();
             continue;
         }
     }
+    if(info.continua == 0)
+        final_jogo(0);
     if(data_trata_cmd.estado_thread)
         pthread_kill(threads, SIGUSR1);
-    
-    for(i=0;i<info.cli_activos;i++){
-        if((fifocliente=open(info.clientes_activos[i].dados_cli.fifopid, O_WRONLY)) < 0){
-            perror("Erro ao abrir o fifo cliente\n");
-        }
-        dados_jogo.estado = 0;
-        if(write(fifocliente,&dados_jogo,sizeof(dados_jogo)) < 0){
-            perror("Erro a escrever para cliente\n");
-        }
-        close(fifocliente);
-    }
     pthread_join(threads, NULL);
     for(i=0;i<num_enemies;i++)
         inimigos_ativos[i].vida=0;
+    pthread_rwlock_rdlock(&lock);
     for(i=0;i<bombas.num_bombas;i++)
         pthread_join(bombas.info_bombas[i].id,NULL);
+    pthread_rwlock_unlock(&lock);
     for(i =0; i< num_enemies;i++)
         pthread_join(enemies_t.id_thread_enemies[i], NULL);
     close(openfifo);
     unlink("/tmp/fifoserv");
-    pthread_mutex_destroy(&lock);
+    pthread_rwlock_destroy(&lock);
     free(bombas.info_bombas);
     free(enemies_t.id_thread_enemies);
     free(inimigos_ativos);
