@@ -232,7 +232,7 @@ void Game::update(servcom novo){
                     nova_migalha->setPos(((i*20)+20),((j*20)+20));
                     migalhas.append(nova_migalha);
                     scene->addItem(nova_migalha);
-                }
+                  }
             }
         }
         novo_player = new Player();
@@ -270,12 +270,15 @@ void Game::update(servcom novo){
             view->hide();
             janela_kick= new Kick();
             janela_kick->show();
-        }
-        else{
-            view->hide();
-            janela_acabou = new Acabou();
-            janela_acabou->show();
-        }
+        }else if(novo.estado == 0){
+                view->hide();
+                janela_acabou = new Acabou();
+                janela_acabou->show();
+            }else if(novo.estado == 5){
+                view->hide();
+                janela_win = new Win();
+                janela_win->show();
+            }
 
 
 }

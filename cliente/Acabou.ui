@@ -67,19 +67,6 @@ p, li { white-space: pre-wrap; }
 &lt;p align=&quot;center&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt; font-weight:600;&quot;&gt;O jogo acabou&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton">
-   <property name="geometry">
-    <rect>
-     <x>390</x>
-     <y>250</y>
-     <width>90</width>
-     <height>28</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Sair</string>
-   </property>
-  </widget>
  </widget>
  <resources/>
  <connections/>

@@ -20,6 +20,8 @@
 #include "MegaBomb.h"
 #include "Kick.h"
 #include "Acabou.h"
+#include "Win.h"
+
 using namespace std;
 
 class Game : public QObject{
@@ -31,6 +33,7 @@ class Game : public QObject{
     QGraphicsView  *view;
     Acabou* janela_acabou;
     Kick* janela_kick;
+    Win* janela_win;
     Leitor *leitor;
     QThread leitorthread;
     QSocketNotifier *snUsr1;
