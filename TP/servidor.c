@@ -103,7 +103,7 @@ int addnewcliente_ativo(clogin newcli, int nmaxplay){
             return 1;
         }
     }
-}             //USA OS MUTEXES
+} 
 
 void set_atributos_newcli(){  
     info.clientes_activos[info.cli_activos].atributos_cli.bomb=3;
@@ -205,7 +205,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                         if(mig==1 && mig_aux > 0){
                             info.mapa[i][j].wall = 3;
                             --mig_aux;
-                            mig = (rand()%10)+1;
+                            mig = (rand()%15)+10;
                         }else{
                             info.mapa[i][j].wall = 0;
                             --mig;
@@ -223,7 +223,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
                 if(mig == 1 && mig_aux > 0){
                     info.mapa[i][j].wall = 3;
                     --mig_aux;
-                    mig = (rand()%10)+1;
+                    mig = (rand()%15)+10;
                 }else{
                     --mig;
                 }
@@ -250,7 +250,7 @@ void inicializa_mapa(int n_migalhas, enemy* inimigos, int num_inimigos){
         }
     }
     return;
-}//PODEMOS ALTERAR A DIFICULDADE AQUI NO RAND
+}
 
 void removecliente_ativo(int razao, int cli){
     dcli* aux;
@@ -330,20 +330,9 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
             info.mapa[x_atual+x][y_atual+y].wall=0;
             info.clientes_activos[aux].atributos_cli.pontuacao++;   
             }
-        if(info.mapa[x_atual+x][y_atual+y].powerup > 0){
-            if(info.mapa[x_atual+x][y_atual+y].powerup == 1)
-                info.clientes_activos[aux].atributos_cli.nvidas++;
-            else
-                info.clientes_activos[aux].atributos_cli.bomb++;
-            info.mapa[x_atual+x][y_atual+y].powerup=0;
-        }
-            
-            //FALTA MIGALHAS E POWERUPS
-            //COMO E PARA ACABAR O MAPA, PRECISAMOS DE UMA VARIAVEL QUE GUARDE OS OBJETOS QUE JA SE APANHOU OU OS QUE FALTAM
         }
     return 0;
-    //ACABAR FALTA AS MIGALHAS OS POWERUPS
-}      //INCOMPLETO 
+}      
 
 void trataevalida_tecla(cmov movcli){   
     int aux_cli, morto=0;
@@ -436,7 +425,6 @@ void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
     switch(morto){
         case 1: 
             dados_inimigo->vida=0;
-            info.mapa[dados_inimigo->x][dados_inimigo->y].powerup = dados_inimigo->powerup;
             return;
         case 2:
             for(int j=0;j<info.cli_activos;j++){
@@ -506,9 +494,7 @@ void* tratateclado(void* data_trata_cmd){
             if((openfifo = open("/tmp/fifoserv", O_WRONLY)) < 0){
                 perror("Erro ao abrir o fifo\n");
             }
-            //pthread_mutex_lock(&lock);
             info.continua=0;
-            //pthread_mutex_unlock(&lock);
             data->estado_thread=0;
             if(write(openfifo,&encerrar,sizeof(encerrar)) < 0){
                 perror("Erro ao escrever para fifo\n");
@@ -647,7 +633,6 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)) && inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
-                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -683,7 +668,6 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
-                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -719,7 +703,6 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
-                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -755,7 +738,6 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
-                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -959,7 +941,6 @@ int main(int argc, char** argv){
     for(i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida = 1;
         inimigos_ativos[i].id = i;
-        inimigos_ativos[i].powerup = (rand()%2) +1;
         if(pthread_create(&enemies_t.id_thread_enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
             perror("Erro ao criar a thread\n");
             return(EXIT_FAILURE);

@@ -53,7 +53,6 @@ typedef struct enemies{
 
 typedef struct jogadores{
     int x, y;       //posicao no mapa
-    int items;      //migalhas para passar de nivel
     int bomb;
     int megabomb;
     int nvidas;     //numero de vidas do jogador
