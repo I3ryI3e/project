@@ -13,7 +13,6 @@ infoglobal info;
 pthread_t threads;
 enemyglobal enemies_t;
 bombglobal bombas;
-//thread_mutex_t lock;
 pthread_rwlock_t lock;
 
 void adduser(char* nomefich, char* cmd){  
@@ -332,8 +331,11 @@ int updownleftright(int x, int y, int x_atual, int y_atual){
             info.clientes_activos[aux].atributos_cli.pontuacao++;   
             }
         if(info.mapa[x_atual+x][y_atual+y].powerup > 0){
-           // info.clientes_activos[aux].atributos_cli. += info.mapa[x_atual+x][y_atual+y].powerup; ////wtfff
-            //info.mapa[x_atual+x][y_atual+y].powerup=0;
+            if(info.mapa[x_atual+x][y_atual+y].powerup == 1)
+                info.clientes_activos[aux].atributos_cli.nvidas++;
+            else
+                info.clientes_activos[aux].atributos_cli.bomb++;
+            info.mapa[x_atual+x][y_atual+y].powerup=0;
         }
             
             //FALTA MIGALHAS E POWERUPS
@@ -434,6 +436,7 @@ void trataevalida_tecla_inimigo(char tecla, enemy* dados_inimigo){
     switch(morto){
         case 1: 
             dados_inimigo->vida=0;
+            info.mapa[dados_inimigo->x][dados_inimigo->y].powerup = dados_inimigo->powerup;
             return;
         case 2:
             for(int j=0;j<info.cli_activos;j++){
@@ -644,6 +647,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x+i)) && (inimigos[m].y == (bomba.y)) && inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -679,6 +683,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x-j)) && (inimigos[m].y == (bomba.y))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -714,6 +719,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y+k))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -749,6 +755,7 @@ void explode_bomba(bomb_mb bomba, enemy* inimigos, int num_inimigos){
                         for(m=0;m<num_inimigos;m++){
                             if((inimigos[m].x == (bomba.x)) && (inimigos[m].y == (bomba.y-l))&& inimigos[m].vida == 1){
                                 inimigos[m].vida = 0;
+                                info.mapa[inimigos[m].x][inimigos[m].y].powerup = inimigos[m].powerup;
                                 info.mapa[inimigos[m].x][inimigos[m].y].personagem=0;
                             }
                         }
@@ -952,6 +959,7 @@ int main(int argc, char** argv){
     for(i=0;i<num_enemies;i++){
         inimigos_ativos[i].vida = 1;
         inimigos_ativos[i].id = i;
+        inimigos_ativos[i].powerup = (rand()%2) +1;
         if(pthread_create(&enemies_t.id_thread_enemies[i], NULL, enemy_thread, (void*)&inimigos_ativos[i]) != 0){
             perror("Erro ao criar a thread\n");
             return(EXIT_FAILURE);
